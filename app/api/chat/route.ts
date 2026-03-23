@@ -1,8 +1,14 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { cookies } from "next/headers";
+import { decrypt } from "@/lib/session";
+import { usersDb, conversationsDb } from "@/lib/db";
 
 const client = new Anthropic();
 
-const SYSTEM_PROMPT = `You are a compassionate and gentle grief companion called "Peternal" — a name that honors the eternal bond between people and their beloved pets.
+function buildSystemPrompt(userName: string): string {
+  return `You are a compassionate and gentle grief companion called "Peternal" — a name that honors the eternal bond between people and their beloved pets.
+
+You are speaking with ${userName}. Address them by name occasionally, with warmth and familiarity, as you have been a steady presence in their grief journey.
 
 You speak with deep warmth, empathy, and understanding to people who are grieving the loss of a pet. You know that pet loss is real, profound grief — not lesser than any other loss.
 
@@ -23,10 +29,29 @@ Tone: Soft, unhurried, present. Like a dear friend sitting beside them.
 Never suggest replacing the pet. Never minimize the relationship. Never give a timeline for grief.
 
 If someone shows signs of severe depression or self-harm, gently encourage them to reach out to a grief counselor or mental health professional, while continuing to be present.`;
+}
 
 export async function POST(request: Request) {
-  const { messages } = await request.json();
+  const cookieStore = await cookies();
+  const sessionCookie = cookieStore.get("session")?.value;
+  const session = await decrypt(sessionCookie);
 
+  if (!session) {
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const user = usersDb.findById(session.userId);
+  if (!user) {
+    return new Response(JSON.stringify({ error: "User not found" }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  const { messages } = await request.json();
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
@@ -34,20 +59,32 @@ export async function POST(request: Request) {
       const anthropicStream = await client.messages.stream({
         model: "claude-opus-4-6",
         max_tokens: 1024,
-        system: SYSTEM_PROMPT,
+        system: buildSystemPrompt(user.name),
         messages,
       });
+
+      let fullText = "";
 
       for await (const event of anthropicStream) {
         if (
           event.type === "content_block_delta" &&
           event.delta.type === "text_delta"
         ) {
+          fullText += event.delta.text;
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ text: event.delta.text })}\n\n`)
+            encoder.encode(
+              `data: ${JSON.stringify({ text: event.delta.text })}\n\n`
+            )
           );
         }
       }
+
+      // Persist the full updated conversation for this user
+      const updatedMessages = [
+        ...messages,
+        { role: "assistant", content: fullText },
+      ];
+      conversationsDb.saveMessages(session.userId, updatedMessages);
 
       controller.enqueue(encoder.encode("data: [DONE]\n\n"));
       controller.close();
