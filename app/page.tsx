@@ -2,10 +2,11 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { usersDb, conversationsDb } from "@/lib/db";
 import ChatInterface from "@/app/components/ChatInterface";
+import LandingPage from "@/app/components/LandingPage";
 
 export default async function Home() {
   const session = await getSession();
-  if (!session) redirect("/login");
+  if (!session) return <LandingPage />;
 
   const user = usersDb.findById(session.userId);
   if (!user) redirect("/login");
