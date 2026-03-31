@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Peternal — A gentle space to grieve and remember",
+  title: "Shared Leash — A gentle space to grieve and remember",
   description: "A compassionate AI companion for those grieving the loss of a beloved pet.",
 };
 

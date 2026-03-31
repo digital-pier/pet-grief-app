@@ -12,7 +12,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <span className="text-5xl">🐾</span>
-          <h1 className="text-3xl font-bold text-amber-900 mt-3">Peternal</h1>
+          <h1 className="text-3xl font-bold text-amber-900 mt-3">Shared Leash</h1>
           <p className="text-amber-700 text-sm mt-1">A gentle space to grieve and remember</p>
         </div>
 

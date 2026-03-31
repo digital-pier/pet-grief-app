@@ -122,7 +122,7 @@ export default function ChatInterface({ initialMessages, userName }: Props) {
           <span className="text-4xl">🐾</span>
           <div className="flex-1">
             <h1 className="text-2xl font-bold text-amber-900 tracking-tight">
-              Peternal
+              Shared Leash
             </h1>
             <p className="text-sm text-amber-700">
               A gentle space to grieve and remember
