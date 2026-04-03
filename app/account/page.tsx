@@ -1,25 +1,23 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
-import { conversationsDb } from "@/lib/db";
 import { prisma } from "@/lib/prisma";
-import ChatInterface from "@/app/components/ChatInterface";
-import LandingPage from "@/app/components/LandingPage";
+import AccountPage from "@/app/components/AccountPage";
 
-export default async function Home() {
+export default async function Account() {
   const session = await getSession();
-  if (!session) return <LandingPage />;
+  if (!session) redirect("/login");
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   if (!user) redirect("/login");
 
-  const history = await conversationsDb.getMessages(session.userId);
-
   return (
-    <ChatInterface
-      initialMessages={history}
+    <AccountPage
       userName={user.name}
       planTier={user.planTier}
+      subscriptionStatus={user.subscriptionStatus}
       monthlyChatsUsed={user.monthlyChatsUsed}
+      currentPeriodEnd={user.currentPeriodEnd?.toISOString() ?? null}
+      cancelAtPeriodEnd={user.cancelAtPeriodEnd}
     />
   );
 }

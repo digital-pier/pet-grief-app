@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { cookies } from "next/headers";
 import { decrypt } from "@/lib/session";
 import { usersDb, conversationsDb } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 const client = new Anthropic();
 
@@ -43,11 +44,26 @@ export async function POST(request: Request) {
     });
   }
 
-  const user = usersDb.findById(session.userId);
+  const user = await usersDb.findById(session.userId);
   if (!user) {
     return new Response(JSON.stringify({ error: "User not found" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  // Chat gating for free-tier users
+  const fullUser = await prisma.user.findUnique({ where: { id: session.userId } });
+  if (fullUser && fullUser.planTier === "free") {
+    if (fullUser.monthlyChatsUsed >= 5) {
+      return new Response(
+        JSON.stringify({ error: "chat_limit_reached" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    await prisma.user.update({
+      where: { id: session.userId },
+      data: { monthlyChatsUsed: fullUser.monthlyChatsUsed + 1 },
     });
   }
 
@@ -84,7 +100,7 @@ export async function POST(request: Request) {
         ...messages,
         { role: "assistant", content: fullText },
       ];
-      conversationsDb.saveMessages(session.userId, updatedMessages);
+      await conversationsDb.saveMessages(session.userId, updatedMessages);
 
       controller.enqueue(encoder.encode("data: [DONE]\n\n"));
       controller.close();
