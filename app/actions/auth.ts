@@ -29,7 +29,7 @@ export async function signup(state: AuthFormState, formData: FormData): Promise<
 
   if (Object.keys(errors).length > 0) return { errors };
 
-  const existing = usersDb.findByEmail(email);
+  const existing = await usersDb.findByEmail(email);
   if (existing) {
     return { errors: { email: ["An account with this email already exists."] } };
   }
@@ -38,7 +38,7 @@ export async function signup(state: AuthFormState, formData: FormData): Promise<
 
   let user;
   try {
-    user = usersDb.create(name, email, passwordHash);
+    user = await usersDb.create(name, email, passwordHash);
   } catch {
     return { message: "Something went wrong creating your account. Please try again." };
   }
@@ -55,7 +55,7 @@ export async function login(state: AuthFormState, formData: FormData): Promise<A
     return { message: "Please enter your email and password." };
   }
 
-  const user = usersDb.findByEmail(email);
+  const user = await usersDb.findByEmail(email);
   if (!user) {
     return { message: "No account found with that email." };
   }

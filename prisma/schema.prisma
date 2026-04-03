@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id                 Int            @id @default(autoincrement())
+  name               String
+  email              String         @unique
+  passwordHash       String         @map("password_hash")
+  createdAt          DateTime       @default(now()) @map("created_at")
+
+  // Stripe & subscription fields
+  stripeCustomerId   String?        @map("stripe_customer_id")
+  subscriptionStatus String         @default("free") @map("subscription_status")
+  planTier           String         @default("free") @map("plan_tier")
+  currentPeriodStart DateTime?      @map("current_period_start")
+  currentPeriodEnd   DateTime?      @map("current_period_end")
+  cancelAtPeriodEnd  Boolean        @default(false) @map("cancel_at_period_end")
+  monthlyChatsUsed   Int            @default(0) @map("monthly_chats_used")
+  monthlyChatsResetAt DateTime?     @map("monthly_chats_reset_at")
+
+  conversation       Conversation?
+  subscriptions      Subscription[]
+
+  @@map("users")
+}
+
+model Conversation {
+  userId    Int      @id @map("user_id")
+  messages  String   @default("[]")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("conversations")
+}
+
+model Subscription {
+  id                   Int      @id @default(autoincrement())
+  userId               Int      @map("user_id")
+  stripeSubscriptionId String   @map("stripe_subscription_id")
+  status               String
+  planTier             String   @map("plan_tier")
+  currentPeriodStart   DateTime @map("current_period_start")
+  currentPeriodEnd     DateTime @map("current_period_end")
+  cancelAtPeriodEnd    Boolean  @default(false) @map("cancel_at_period_end")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("subscriptions")
+}

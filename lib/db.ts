@@ -1,29 +1,4 @@
-import Database from "better-sqlite3";
-import path from "path";
-import fs from "fs";
-
-const DATA_DIR = path.join(process.cwd(), ".data");
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
-}
-
-const db = new Database(path.join(DATA_DIR, "shared-leash.db"));
-
-db.exec(`
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    email TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL,
-    created_at INTEGER NOT NULL DEFAULT (unixepoch())
-  );
-
-  CREATE TABLE IF NOT EXISTS conversations (
-    user_id INTEGER PRIMARY KEY REFERENCES users(id),
-    messages TEXT NOT NULL DEFAULT '[]',
-    updated_at INTEGER NOT NULL DEFAULT (unixepoch())
-  );
-`);
+import { prisma } from "./prisma";
 
 export interface User {
   id: number;
@@ -37,37 +12,40 @@ export interface Message {
   content: string;
 }
 
+function toUser(row: { id: number; name: string; email: string; passwordHash: string }): User {
+  return { id: row.id, name: row.name, email: row.email, password_hash: row.passwordHash };
+}
+
 export const usersDb = {
-  create(name: string, email: string, passwordHash: string): User {
-    const stmt = db.prepare(
-      "INSERT INTO users (name, email, password_hash) VALUES (?, ?, ?)"
-    );
-    const result = stmt.run(name, email, passwordHash);
-    return { id: result.lastInsertRowid as number, name, email, password_hash: passwordHash };
+  async create(name: string, email: string, passwordHash: string): Promise<User> {
+    const row = await prisma.user.create({
+      data: { name, email, passwordHash },
+    });
+    return toUser(row);
   },
 
-  findByEmail(email: string): User | undefined {
-    return db.prepare("SELECT * FROM users WHERE email = ?").get(email) as User | undefined;
+  async findByEmail(email: string): Promise<User | undefined> {
+    const row = await prisma.user.findUnique({ where: { email } });
+    return row ? toUser(row) : undefined;
   },
 
-  findById(id: number): User | undefined {
-    return db.prepare("SELECT * FROM users WHERE id = ?").get(id) as User | undefined;
+  async findById(id: number): Promise<User | undefined> {
+    const row = await prisma.user.findUnique({ where: { id } });
+    return row ? toUser(row) : undefined;
   },
 };
 
 export const conversationsDb = {
-  getMessages(userId: number): Message[] {
-    const row = db
-      .prepare("SELECT messages FROM conversations WHERE user_id = ?")
-      .get(userId) as { messages: string } | undefined;
+  async getMessages(userId: number): Promise<Message[]> {
+    const row = await prisma.conversation.findUnique({ where: { userId } });
     return row ? JSON.parse(row.messages) : [];
   },
 
-  saveMessages(userId: number, messages: Message[]): void {
-    db.prepare(`
-      INSERT INTO conversations (user_id, messages, updated_at)
-      VALUES (?, ?, unixepoch())
-      ON CONFLICT(user_id) DO UPDATE SET messages = excluded.messages, updated_at = unixepoch()
-    `).run(userId, JSON.stringify(messages));
+  async saveMessages(userId: number, messages: Message[]): Promise<void> {
+    await prisma.conversation.upsert({
+      where: { userId },
+      update: { messages: JSON.stringify(messages) },
+      create: { userId, messages: JSON.stringify(messages) },
+    });
   },
 };
