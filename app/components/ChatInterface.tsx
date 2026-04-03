@@ -3,6 +3,20 @@
 import { useState, useRef, useEffect } from "react";
 import { logout } from "@/app/actions/auth";
 
+const CRISIS_SIGNALS = [
+  "don't want to be here", "ending it", "end it all",
+  "hurt myself", "harm myself", "kill myself",
+  "no reason to go on", "better off without me",
+  "everyone would be better off", "can't go on",
+  "don't want to live", "want to die", "suicidal",
+  "self harm", "self-harm",
+];
+
+function containsCrisisSignal(text: string): boolean {
+  const lower = text.toLowerCase();
+  return CRISIS_SIGNALS.some((signal) => lower.includes(signal));
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
@@ -24,6 +38,7 @@ export default function ChatInterface({ initialMessages, userName, planTier, mon
     planTier === "free" && monthlyChatsUsed >= 5
   );
   const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [crisisDetected, setCrisisDetected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -53,6 +68,9 @@ export default function ChatInterface({ initialMessages, userName, planTier, mon
     if (!input.trim() || isLoading) return;
 
     const userMessage: Message = { role: "user", content: input.trim() };
+    if (containsCrisisSignal(userMessage.content)) {
+      setCrisisDetected(true);
+    }
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
     setInput("");
@@ -162,6 +180,16 @@ export default function ChatInterface({ initialMessages, userName, planTier, mon
             <span className="text-sm text-amber-700 hidden sm:block">
               Hello, {userName}
             </span>
+            {crisisDetected && (
+              <a
+                href="https://www.crisistextline.org"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg px-3 py-1.5 transition-colors font-medium"
+              >
+                Talk to a Human
+              </a>
+            )}
             <a
               href="/account"
               className="text-xs text-amber-600 hover:text-amber-900 border border-amber-200 hover:border-amber-400 rounded-lg px-3 py-1.5 transition-colors"
@@ -314,6 +342,30 @@ export default function ChatInterface({ initialMessages, userName, planTier, mon
       {/* Input area */}
       <div className="bg-white/90 backdrop-blur-sm border-t border-amber-100 shadow-lg sticky bottom-0">
         <div className="max-w-3xl mx-auto px-4 py-4">
+          {crisisDetected && (
+            <div className="mb-3 rounded-2xl bg-amber-50 border border-amber-200 px-5 py-4 text-center">
+              <p className="text-sm font-medium text-amber-900">
+                You&apos;re not alone in this.
+              </p>
+              <p className="text-xs text-amber-700 mt-1">
+                If you&apos;re having thoughts of hurting yourself, please reach out:
+              </p>
+              <div className="flex justify-center gap-3 mt-3">
+                <a
+                  href="sms:741741&body=HOME"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-sm font-medium transition-colors"
+                >
+                  Text HOME to 741741
+                </a>
+                <a
+                  href="tel:988"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-amber-100 hover:bg-amber-200 border border-amber-300 text-amber-900 text-sm font-medium transition-colors"
+                >
+                  Call or text 988
+                </a>
+              </div>
+            </div>
+          )}
           <div className="flex gap-3 items-end">
             <textarea
               ref={textareaRef}
