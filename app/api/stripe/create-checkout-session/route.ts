@@ -31,7 +31,15 @@ export async function POST() {
     });
   }
 
-  const stripe = getStripe();
+  let stripe;
+  try {
+    stripe = getStripe();
+  } catch {
+    return new Response(JSON.stringify({ error: "Billing is not available right now" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 
   // Create or reuse Stripe customer
   let stripeCustomerId = user.stripeCustomerId;

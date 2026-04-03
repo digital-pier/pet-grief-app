@@ -1,15 +1,14 @@
 import Stripe from "stripe";
 
-let _stripe: Stripe | null = null;
+let stripeInstance: Stripe | null = null;
 
 export function getStripe(): Stripe {
-  if (!_stripe) {
-    if (!process.env.STRIPE_SECRET_KEY) {
-      throw new Error("STRIPE_SECRET_KEY environment variable is not set");
+  if (!stripeInstance) {
+    const key = process.env.STRIPE_SECRET_KEY;
+    if (!key || key === "sk_test_placeholder") {
+      throw new Error("Stripe secret key not configured");
     }
-    _stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      typescript: true,
-    });
+    stripeInstance = new Stripe(key);
   }
-  return _stripe;
+  return stripeInstance;
 }
