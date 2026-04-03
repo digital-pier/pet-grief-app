@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Anthropic from "@anthropic-ai/sdk";
 import { cookies } from "next/headers";
 import { decrypt } from "@/lib/session";

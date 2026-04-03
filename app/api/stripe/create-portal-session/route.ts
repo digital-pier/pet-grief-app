@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { cookies } from "next/headers";
 import { decrypt } from "@/lib/session";
 import { prisma } from "@/lib/prisma";

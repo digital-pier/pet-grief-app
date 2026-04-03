@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import type Stripe from "stripe";
