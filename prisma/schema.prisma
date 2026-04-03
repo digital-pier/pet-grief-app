@@ -23,6 +23,10 @@ model User {
   monthlyChatsUsed   Int            @default(0) @map("monthly_chats_used")
   monthlyChatsResetAt DateTime?     @map("monthly_chats_reset_at")
 
+  // Crisis signal tracking
+  crisisSignal       Boolean        @default(false) @map("crisis_signal")
+  crisisSignalAt     DateTime?      @map("crisis_signal_at")
+
   conversation       Conversation?
   subscriptions      Subscription[]
 
