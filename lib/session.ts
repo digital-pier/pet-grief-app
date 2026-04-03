@@ -2,9 +2,11 @@ import "server-only";
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
-const secretKey = process.env.SESSION_SECRET;
-if (!secretKey) throw new Error("SESSION_SECRET environment variable is not set");
-const encodedKey = new TextEncoder().encode(secretKey);
+function getEncodedKey(): Uint8Array {
+  const secretKey = process.env.SESSION_SECRET;
+  if (!secretKey) throw new Error("SESSION_SECRET environment variable is not set");
+  return new TextEncoder().encode(secretKey);
+}
 
 export interface SessionPayload {
   userId: number;
@@ -16,12 +18,12 @@ export async function encrypt(payload: SessionPayload): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(encodedKey);
+    .sign(getEncodedKey());
 }
 
 export async function decrypt(session: string | undefined = ""): Promise<SessionPayload | null> {
   try {
-    const { payload } = await jwtVerify(session, encodedKey, { algorithms: ["HS256"] });
+    const { payload } = await jwtVerify(session, getEncodedKey(), { algorithms: ["HS256"] });
     return {
       userId: payload.userId as number,
       expiresAt: new Date(payload.expiresAt as string),
