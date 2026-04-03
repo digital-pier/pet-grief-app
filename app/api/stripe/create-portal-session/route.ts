@@ -22,7 +22,16 @@ export async function POST() {
     });
   }
 
-  const stripe = getStripe();
+  let stripe;
+  try {
+    stripe = getStripe();
+  } catch {
+    return new Response(JSON.stringify({ error: "Billing is not available right now" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const appUrl = process.env.APP_URL || "http://localhost:3000";
 
   const portalSession = await stripe.billingPortal.sessions.create({

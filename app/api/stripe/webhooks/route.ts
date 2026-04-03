@@ -24,7 +24,16 @@ export async function POST(request: Request) {
     return new Response("Missing signature or webhook secret", { status: 400 });
   }
 
-  const stripe = getStripe();
+  let stripe;
+  try {
+    stripe = getStripe();
+  } catch {
+    return new Response(JSON.stringify({ error: "Billing is not available right now" }), {
+      status: 503,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   let event: Stripe.Event;
   try {
     event = stripe.webhooks.constructEvent(
