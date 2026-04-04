@@ -163,7 +163,7 @@ export async function POST(request: Request) {
     (m: { role: string }) => m.role === "user"
   );
   if (lastUserMessage) {
-    const lower = lastUserMessage.content.toLowerCase();
+    const lower = lastUserMessage.content.toLowerCase().replace(/[\u2018\u2019]/g, "'");
     if (CRISIS_SIGNALS.some((s) => lower.includes(s))) {
       console.log(`[CRISIS SIGNAL DETECTED] userId: ${session.userId}`);
       await prisma.user.updateMany({
