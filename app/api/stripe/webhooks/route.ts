@@ -1,7 +1,5 @@
 export const dynamic = "force-dynamic";
 
-import { getStripe } from "@/lib/stripe";
-import { prisma } from "@/lib/prisma";
 import type Stripe from "stripe";
 
 function getCustomerId(
@@ -19,6 +17,9 @@ function getPeriodDates(subscription: Stripe.Subscription) {
 }
 
 export async function POST(request: Request) {
+  const { prisma } = await import("@/lib/prisma");
+  const { getStripe } = await import("@/lib/stripe");
+
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
 

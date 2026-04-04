@@ -2,10 +2,11 @@ export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
 import { decrypt } from "@/lib/session";
-import { prisma } from "@/lib/prisma";
-import { getStripe } from "@/lib/stripe";
 
 export async function POST() {
+  const { prisma } = await import("@/lib/prisma");
+  const { getStripe } = await import("@/lib/stripe");
+
   const cookieStore = await cookies();
   const session = await decrypt(cookieStore.get("session")?.value);
 
