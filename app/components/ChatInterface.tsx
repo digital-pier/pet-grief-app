@@ -62,6 +62,7 @@ export default function ChatInterface({ initialMessages, userName, userCrisisSig
 
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
+      textareaRef.current.focus();
     }
 
     try {
@@ -119,6 +120,7 @@ export default function ChatInterface({ initialMessages, userName, userCrisisSig
       setStreamingText("");
     } finally {
       setIsLoading(false);
+      textareaRef.current?.focus();
     }
   };
 
