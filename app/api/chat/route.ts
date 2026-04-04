@@ -1,13 +1,9 @@
 export const dynamic = "force-dynamic";
 
-import Anthropic from "@anthropic-ai/sdk";
 import { cookies } from "next/headers";
 import { decrypt } from "@/lib/session";
 import { usersDb, conversationsDb } from "@/lib/db";
-import { prisma } from "@/lib/prisma";
 import { getRelevantChunks } from "@/lib/rag";
-
-const client = new Anthropic();
 
 function buildSystemPrompt(userName: string, relevantChunks: string[] = []): string {
   const ragSection = relevantChunks.length > 0
@@ -114,6 +110,10 @@ function buildSystemPrompt(userName: string, relevantChunks: string[] = []): str
 
 
 export async function POST(request: Request) {
+  const { default: Anthropic } = await import("@anthropic-ai/sdk");
+  const { prisma } = await import("@/lib/prisma");
+  const client = new Anthropic();
+
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("session")?.value;
   const session = await decrypt(sessionCookie);

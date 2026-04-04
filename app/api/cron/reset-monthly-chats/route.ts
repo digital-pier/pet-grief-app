@@ -1,8 +1,7 @@
 export const dynamic = "force-dynamic";
 
-import { prisma } from "@/lib/prisma";
-
 export async function GET(request: Request) {
+  const { prisma } = await import("@/lib/prisma");
   const authHeader = request.headers.get("authorization");
   const expected = process.env.CRON_SECRET;
 
