@@ -32,7 +32,9 @@ export default function ChatInterface({ initialMessages, userName }: Props) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [streamingText, setStreamingText] = useState("");
-  const [crisisDetected, setCrisisDetected] = useState(false);
+  const [crisisDetected, setCrisisDetected] = useState(() =>
+    initialMessages.some((m) => m.role === "user" && containsCrisisSignal(m.content))
+  );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
