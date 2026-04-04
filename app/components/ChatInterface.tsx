@@ -47,12 +47,6 @@ export default function ChatInterface({ initialMessages, userName, userCrisisSig
     scrollToBottom();
   }, [messages, streamingText]);
 
-  useEffect(() => {
-    if (!isLoading) {
-      textareaRef.current?.focus();
-    }
-  }, [isLoading]);
-
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
