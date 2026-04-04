@@ -47,6 +47,12 @@ export default function ChatInterface({ initialMessages, userName, userCrisisSig
     scrollToBottom();
   }, [messages, streamingText]);
 
+  useEffect(() => {
+    if (!isLoading) {
+      textareaRef.current?.focus();
+    }
+  }, [isLoading]);
+
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -62,7 +68,6 @@ export default function ChatInterface({ initialMessages, userName, userCrisisSig
 
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
-      textareaRef.current.focus();
     }
 
     try {
@@ -120,7 +125,6 @@ export default function ChatInterface({ initialMessages, userName, userCrisisSig
       setStreamingText("");
     } finally {
       setIsLoading(false);
-      textareaRef.current?.focus();
     }
   };
 
