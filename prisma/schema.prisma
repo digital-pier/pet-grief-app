@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 model User {
@@ -13,7 +13,7 @@ model User {
   passwordHash       String         @map("password_hash")
   createdAt          DateTime       @default(now()) @map("created_at")
 
-  // Stripe & subscription fields
+  // Stripe & subscription fields (kept for future use)
   stripeCustomerId   String?        @map("stripe_customer_id")
   subscriptionStatus String         @default("free") @map("subscription_status")
   planTier           String         @default("free") @map("plan_tier")
@@ -35,7 +35,7 @@ model User {
 
 model Conversation {
   userId    Int      @id @map("user_id")
-  messages  String   @default("[]") @db.Text
+  messages  String   @default("[]")
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   user User @relation(fields: [userId], references: [id])
