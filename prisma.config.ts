@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "prisma/config";
 
 export default defineConfig({
@@ -6,6 +7,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: process.env.DATABASE_URL!,
+    url: `file:${path.join(process.cwd(), ".data", "shared-leash.db")}`,
   },
 });
