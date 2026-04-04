@@ -19,6 +19,7 @@ export default async function Home() {
     <ChatInterface
       initialMessages={history}
       userName={user.name}
+      userCrisisSignal={user.crisisSignal}
     />
   );
 }
