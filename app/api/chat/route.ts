@@ -133,21 +133,6 @@ export async function POST(request: Request) {
     });
   }
 
-  // Chat gating for free-tier users
-  const fullUser = await prisma.user.findUnique({ where: { id: session.userId } });
-  if (fullUser && fullUser.planTier === "free") {
-    if (fullUser.monthlyChatsUsed >= 5) {
-      return new Response(
-        JSON.stringify({ error: "chat_limit_reached" }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      );
-    }
-    await prisma.user.update({
-      where: { id: session.userId },
-      data: { monthlyChatsUsed: fullUser.monthlyChatsUsed + 1 },
-    });
-  }
-
   const { messages } = await request.json();
 
   // Crisis signal detection (server-side)
