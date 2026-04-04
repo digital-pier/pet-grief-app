@@ -16,11 +16,7 @@ export default async function Account() {
   return (
     <AccountPage
       userName={user.name}
-      planTier={user.planTier}
-      subscriptionStatus={user.subscriptionStatus}
-      monthlyChatsUsed={user.monthlyChatsUsed}
-      currentPeriodEnd={user.currentPeriodEnd?.toISOString() ?? null}
-      cancelAtPeriodEnd={user.cancelAtPeriodEnd}
+      email={user.email}
     />
   );
 }

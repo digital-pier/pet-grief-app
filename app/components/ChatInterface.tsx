@@ -25,19 +25,13 @@ interface Message {
 interface Props {
   initialMessages: Message[];
   userName: string;
-  planTier: string;
-  monthlyChatsUsed: number;
 }
 
-export default function ChatInterface({ initialMessages, userName, planTier, monthlyChatsUsed }: Props) {
+export default function ChatInterface({ initialMessages, userName }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [streamingText, setStreamingText] = useState("");
-  const [chatLimitReached, setChatLimitReached] = useState(
-    planTier === "free" && monthlyChatsUsed >= 5
-  );
-  const [upgradeLoading, setUpgradeLoading] = useState(false);
   const [crisisDetected, setCrisisDetected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -49,20 +43,6 @@ export default function ChatInterface({ initialMessages, userName, planTier, mon
   useEffect(() => {
     scrollToBottom();
   }, [messages, streamingText]);
-
-  const handleUpgrade = async () => {
-    setUpgradeLoading(true);
-    try {
-      const res = await fetch("/api/stripe/create-checkout-session", {
-        method: "POST",
-      });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-    } catch {
-      // ignore
-    }
-    setUpgradeLoading(false);
-  };
 
   const sendMessage = async () => {
     if (!input.trim() || isLoading) return;
@@ -87,16 +67,6 @@ export default function ChatInterface({ initialMessages, userName, planTier, mon
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: updatedMessages }),
       });
-
-      if (response.status === 403) {
-        const data = await response.json();
-        if (data.error === "chat_limit_reached") {
-          setChatLimitReached(true);
-          setMessages((prev) => prev.slice(0, -1));
-          setIsLoading(false);
-          return;
-        }
-      }
 
       if (!response.ok) throw new Error("Request failed");
 
@@ -303,35 +273,6 @@ export default function ChatInterface({ initialMessages, userName, planTier, mon
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce [animation-delay:0ms]" />
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce [animation-delay:150ms]" />
               <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce [animation-delay:300ms]" />
-            </div>
-          </div>
-        )}
-
-        {/* Chat limit message */}
-        {chatLimitReached && (
-          <div className="flex gap-3 flex-row">
-            <div className="w-9 h-9 rounded-full bg-amber-200 flex items-center justify-center text-xl flex-shrink-0 mt-1">
-              🐾
-            </div>
-            <div className="max-w-[85%] rounded-2xl rounded-tl-sm px-5 py-4 text-sm leading-relaxed bg-amber-50 text-amber-900 shadow-sm border border-amber-200">
-              <p>
-                You&apos;ve used your 5 free conversations this month. Shared
-                Leash Premium gives you unlimited support, whenever you need
-                it — including full memory of your pet&apos;s name and story
-                across every session.
-              </p>
-              <p className="mt-3">
-                <button
-                  onClick={handleUpgrade}
-                  disabled={upgradeLoading}
-                  className="text-amber-700 hover:text-amber-900 font-medium underline underline-offset-2 transition-colors"
-                >
-                  {upgradeLoading ? "Loading…" : "Upgrade now"}
-                </button>
-                <span className="text-amber-600">
-                  {" "}— your grief doesn&apos;t have a monthly limit.
-                </span>
-              </p>
             </div>
           </div>
         )}
