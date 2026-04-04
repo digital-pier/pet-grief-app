@@ -11,7 +11,7 @@ export default async function Home() {
   const { conversationsDb } = await import("@/lib/db");
 
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
-  if (!user) redirect("/login");
+  if (!user) redirect("/api/logout");
 
   const history = await conversationsDb.getMessages(session.userId);
 
