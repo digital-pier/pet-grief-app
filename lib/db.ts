@@ -1,5 +1,3 @@
-import { prisma } from "./prisma";
-
 export interface User {
   id: number;
   name: string;
@@ -18,6 +16,7 @@ function toUser(row: { id: number; name: string; email: string; passwordHash: st
 
 export const usersDb = {
   async create(name: string, email: string, passwordHash: string): Promise<User> {
+    const { prisma } = await import("./prisma");
     const row = await prisma.user.create({
       data: { name, email, passwordHash },
     });
@@ -25,11 +24,13 @@ export const usersDb = {
   },
 
   async findByEmail(email: string): Promise<User | undefined> {
+    const { prisma } = await import("./prisma");
     const row = await prisma.user.findUnique({ where: { email } });
     return row ? toUser(row) : undefined;
   },
 
   async findById(id: number): Promise<User | undefined> {
+    const { prisma } = await import("./prisma");
     const row = await prisma.user.findUnique({ where: { id } });
     return row ? toUser(row) : undefined;
   },
@@ -37,11 +38,13 @@ export const usersDb = {
 
 export const conversationsDb = {
   async getMessages(userId: number): Promise<Message[]> {
+    const { prisma } = await import("./prisma");
     const row = await prisma.conversation.findUnique({ where: { userId } });
     return row ? JSON.parse(row.messages) : [];
   },
 
   async saveMessages(userId: number, messages: Message[]): Promise<void> {
+    const { prisma } = await import("./prisma");
     await prisma.conversation.upsert({
       where: { userId },
       update: { messages: JSON.stringify(messages) },
