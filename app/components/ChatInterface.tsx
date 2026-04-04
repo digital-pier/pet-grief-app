@@ -25,15 +25,16 @@ interface Message {
 interface Props {
   initialMessages: Message[];
   userName: string;
+  userCrisisSignal: boolean;
 }
 
-export default function ChatInterface({ initialMessages, userName }: Props) {
+export default function ChatInterface({ initialMessages, userName, userCrisisSignal }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [streamingText, setStreamingText] = useState("");
   const [crisisDetected, setCrisisDetected] = useState(() =>
-    initialMessages.some((m) => m.role === "user" && containsCrisisSignal(m.content))
+    userCrisisSignal || initialMessages.some((m) => m.role === "user" && containsCrisisSignal(m.content))
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
