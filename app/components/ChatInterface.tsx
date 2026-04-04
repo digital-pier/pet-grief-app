@@ -13,7 +13,7 @@ const CRISIS_SIGNALS = [
 ];
 
 function containsCrisisSignal(text: string): boolean {
-  const lower = text.toLowerCase();
+  const lower = text.toLowerCase().replace(/[\u2018\u2019]/g, "'");
   return CRISIS_SIGNALS.some((signal) => lower.includes(signal));
 }
 
