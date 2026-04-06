@@ -34,6 +34,28 @@ export const usersDb = {
     const row = await prisma.user.findUnique({ where: { id } });
     return row ? toUser(row) : undefined;
   },
+
+  async setResetToken(email: string, token: string, expiry: Date): Promise<void> {
+    const { prisma } = await import("./prisma");
+    await prisma.user.update({
+      where: { email },
+      data: { passwordResetToken: token, passwordResetExpiry: expiry },
+    });
+  },
+
+  async findByResetToken(token: string): Promise<User | undefined> {
+    const { prisma } = await import("./prisma");
+    const row = await prisma.user.findUnique({ where: { passwordResetToken: token } });
+    return row ? toUser(row) : undefined;
+  },
+
+  async updatePassword(email: string, passwordHash: string): Promise<void> {
+    const { prisma } = await import("./prisma");
+    await prisma.user.update({
+      where: { email },
+      data: { passwordHash, passwordResetToken: null, passwordResetExpiry: null },
+    });
+  },
 };
 
 export const conversationsDb = {
