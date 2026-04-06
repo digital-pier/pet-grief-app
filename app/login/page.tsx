@@ -63,6 +63,12 @@ export default function LoginPage() {
             >
               {pending ? "Signing in…" : "Sign in"}
             </button>
+
+            <p className="text-center text-sm">
+              <Link href="/forgot-password" className="text-amber-700 hover:underline">
+                Forgot your password?
+              </Link>
+            </p>
           </form>
 
           <p className="text-center text-sm text-amber-700 mt-6">
