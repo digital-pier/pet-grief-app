@@ -27,6 +27,10 @@ model User {
   crisisSignal       Boolean        @default(false) @map("crisis_signal")
   crisisSignalAt     DateTime?      @map("crisis_signal_at")
 
+  // Password reset
+  passwordResetToken     String?    @unique @map("password_reset_token")
+  passwordResetExpiry    DateTime?  @map("password_reset_expiry")
+
   conversation       Conversation?
   subscriptions      Subscription[]
 
