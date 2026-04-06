@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decrypt } from "@/lib/session";
 
-const publicRoutes = ["/login", "/register"];
+const publicRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
 // "/" is open to everyone — unauthenticated users see the landing page,
 // authenticated users see the chat. Neither should be redirected away.
 const openRoutes = ["/"];
