@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { usersDb } from "@/lib/db";
+import { sendWelcomeEmail } from "@/lib/email";
 import { createSession, deleteSession } from "@/lib/session";
 
 export type AuthFormState =
@@ -44,6 +45,10 @@ export async function signup(state: AuthFormState, formData: FormData): Promise<
   }
 
   await createSession(user.id);
+
+  // Fire welcome email async — don't block the redirect
+  sendWelcomeEmail(email, name).catch(() => {});
+
   redirect("/");
 }
 
