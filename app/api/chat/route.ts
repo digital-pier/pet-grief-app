@@ -5,11 +5,7 @@ import { decrypt } from "@/lib/session";
 import { usersDb, conversationsDb } from "@/lib/db";
 import { getRelevantChunks } from "@/lib/rag";
 
-function buildSystemPrompt(userName: string, relevantChunks: string[] = []): string {
-  const ragSection = relevantChunks.length > 0
-    ? `\n\nRELEVANT KNOWLEDGE FOR THIS CONVERSATION:\n${relevantChunks.join('\n---\n')}`
-    : '';
-
+function buildStaticSystemPrompt(userName: string): string {
   return `You are the Shared Leash grief companion — a warm, deeply compassionate AI built exclusively to support people who have lost a beloved pet.
 
   You are speaking with ${userName}. Address them by name occasionally, with warmth and familiarity, as you have been a steady presence in their grief journey.
@@ -82,7 +78,71 @@ function buildSystemPrompt(userName: string, relevantChunks: string[] = []): str
   Most responses: 2-4 sentences. Grief does not need walls of text. The most powerful responses are often the shortest. Longer responses are appropriate when explaining a reframe (such as euthanasia guilt) or when the user has shared a long story and deserves a full, considered reply.
 
   ENDING SESSIONS
-  Never abruptly end a session. If appropriate, close with an open door: 'I\'m here whenever you need to talk.' Do not say 'Goodbye' — say 'I\'ll be here.'${ragSection}`;
+  Never abruptly end a session. If appropriate, close with an open door: 'I\'m here whenever you need to talk.' Do not say 'Goodbye' — say 'I\'ll be here.'`;
+}
+
+function buildSystemBlocks(userName: string, relevantChunks: string[] = []) {
+  const blocks: Array<{ type: "text"; text: string; cache_control?: { type: "ephemeral" } }> = [
+    {
+      type: "text",
+      text: buildStaticSystemPrompt(userName),
+      cache_control: { type: "ephemeral" },
+    },
+  ];
+
+  if (relevantChunks.length > 0) {
+    blocks.push({
+      type: "text",
+      text: `RELEVANT KNOWLEDGE FOR THIS CONVERSATION:\n${relevantChunks.join('\n---\n')}`,
+    });
+  }
+
+  return blocks;
+}
+
+/**
+ * Adds a cache_control breakpoint to the second-to-last user message
+ * so that all prior conversation history is cached across turns.
+ */
+function withMessageCaching(messages: Array<{ role: string; content: string | Array<Record<string, unknown>> }>) {
+  if (messages.length < 3) return messages;
+
+  // Find the second-to-last user message index
+  let count = 0;
+  let targetIdx = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "user") {
+      count++;
+      if (count === 2) {
+        targetIdx = i;
+        break;
+      }
+    }
+  }
+
+  if (targetIdx === -1) return messages;
+
+  return messages.map((msg, i) => {
+    if (i !== targetIdx) return msg;
+
+    // Convert string content to block format with cache_control
+    if (typeof msg.content === "string") {
+      return {
+        ...msg,
+        content: [
+          { type: "text", text: msg.content, cache_control: { type: "ephemeral" } },
+        ],
+      };
+    }
+
+    // Already block format — add cache_control to the last block
+    const blocks = [...(msg.content as Array<Record<string, unknown>>)];
+    blocks[blocks.length - 1] = {
+      ...blocks[blocks.length - 1],
+      cache_control: { type: "ephemeral" },
+    };
+    return { ...msg, content: blocks };
+  });
 }
 //   return `You are a compassionate and gentle grief companion called "Shared Leash" — a name that honors the bond between people and the pets they love.
 
@@ -166,8 +226,8 @@ export async function POST(request: Request) {
       const anthropicStream = await client.messages.stream({
         model: "claude-opus-4-6",
         max_tokens: 1024,
-        system: buildSystemPrompt(user.name, relevantChunks),
-        messages,
+        system: buildSystemBlocks(user.name, relevantChunks),
+        messages: withMessageCaching(messages),
       });
 
       let fullText = "";
@@ -185,6 +245,20 @@ export async function POST(request: Request) {
           );
         }
       }
+
+      // Log and stream cache performance metrics
+      const finalMsg = await anthropicStream.finalMessage();
+      const usage = finalMsg.usage;
+      const cacheStats = {
+        input_tokens: usage.input_tokens,
+        output_tokens: usage.output_tokens,
+        cache_creation_input_tokens: usage.cache_creation_input_tokens ?? 0,
+        cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
+      };
+      console.log("[CACHE STATS]", JSON.stringify(cacheStats));
+      controller.enqueue(
+        encoder.encode(`data: ${JSON.stringify({ cache_stats: cacheStats })}\n\n`)
+      );
 
       // Persist the full updated conversation for this user
       const updatedMessages = [
