@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { decrypt } from "@/lib/session";
 import { usersDb, conversationsDb } from "@/lib/db";
 import { getRelevantChunks } from "@/lib/rag";
+import type { MessageParam } from "@anthropic-ai/sdk/resources/messages/messages";
 
 function buildStaticSystemPrompt(userName: string): string {
   return `You are the Shared Leash grief companion — a warm, deeply compassionate AI built exclusively to support people who have lost a beloved pet.
@@ -104,7 +105,7 @@ function buildSystemBlocks(userName: string, relevantChunks: string[] = []) {
  * Adds a cache_control breakpoint to the second-to-last user message
  * so that all prior conversation history is cached across turns.
  */
-function withMessageCaching(messages: Array<{ role: string; content: string | Array<Record<string, unknown>> }>) {
+function withMessageCaching(messages: MessageParam[]): MessageParam[] {
   if (messages.length < 3) return messages;
 
   // Find the second-to-last user message index
@@ -122,26 +123,22 @@ function withMessageCaching(messages: Array<{ role: string; content: string | Ar
 
   if (targetIdx === -1) return messages;
 
-  return messages.map((msg, i) => {
+  return messages.map((msg, i): MessageParam => {
     if (i !== targetIdx) return msg;
 
-    // Convert string content to block format with cache_control
-    if (typeof msg.content === "string") {
-      return {
-        ...msg,
-        content: [
-          { type: "text", text: msg.content, cache_control: { type: "ephemeral" } },
-        ],
-      };
-    }
+    const text = typeof msg.content === "string"
+      ? msg.content
+      : msg.content
+          .filter((b): b is { type: "text"; text: string } => b.type === "text")
+          .map((b) => b.text)
+          .join("\n");
 
-    // Already block format — add cache_control to the last block
-    const blocks = [...(msg.content as Array<Record<string, unknown>>)];
-    blocks[blocks.length - 1] = {
-      ...blocks[blocks.length - 1],
-      cache_control: { type: "ephemeral" },
+    return {
+      role: msg.role,
+      content: [
+        { type: "text" as const, text, cache_control: { type: "ephemeral" as const } },
+      ],
     };
-    return { ...msg, content: blocks };
   });
 }
 //   return `You are a compassionate and gentle grief companion called "Shared Leash" — a name that honors the bond between people and the pets they love.
