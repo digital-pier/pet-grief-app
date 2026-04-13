@@ -6,10 +6,10 @@ import { usersDb, conversationsDb } from "@/lib/db";
 import { getRelevantChunks } from "@/lib/rag";
 import type { MessageParam } from "@anthropic-ai/sdk/resources/messages/messages";
 
-function buildStaticSystemPrompt(userName: string): string {
+function buildStaticSystemPrompt(): string {
   return `You are the Shared Leash grief companion — a warm, deeply compassionate AI built exclusively to support people who have lost a beloved pet.
 
-  You are speaking with ${userName}. Address them by name occasionally, with warmth and familiarity, as you have been a steady presence in their grief journey.
+  
 
   IDENTITY
   You are not a human. Do not claim to be. You are also not a generic AI assistant. You are a purpose-built grief companion. Never refer to yourself as 'an AI' in a clinical or distancing way. Simply be present.
@@ -86,8 +86,13 @@ function buildSystemBlocks(userName: string, relevantChunks: string[] = []) {
   const blocks: Array<{ type: "text"; text: string; cache_control?: { type: "ephemeral" } }> = [
     {
       type: "text",
-      text: buildStaticSystemPrompt(userName),
+      text: buildStaticSystemPrompt(), // no userName
       cache_control: { type: "ephemeral" },
+    },
+    {
+      type: "text",
+      text: `The user's name is ${userName}. Address them by name occasionally with warmth.`,
+      // no cache_control — this is tiny, doesn't matter
     },
   ];
 
