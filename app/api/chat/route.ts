@@ -100,6 +100,7 @@ function buildSystemBlocks(userName: string, relevantChunks: string[] = []) {
     blocks.push({
       type: "text",
       text: `RELEVANT KNOWLEDGE FOR THIS CONVERSATION:\n${relevantChunks.join('\n---\n')}`,
+      cache_control : { type:"ephemeral"},
     });
   }
 
@@ -220,13 +221,14 @@ export async function POST(request: Request) {
     }
   }
 
-  const relevantChunks = getRelevantChunks(messages);
+  const firstUserMessage = messages.slice(0,1);
+  const relevantChunks = getRelevantChunks(firstUserMessage);
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
     async start(controller) {
       const anthropicStream = await client.messages.stream({
-        model: "claude-sonnet-4-5",
+        model: "claude-sonnet-4-6",
         max_tokens: 1024,
         system: buildSystemBlocks(user.name, relevantChunks),
         messages: withMessageCaching(messages),
