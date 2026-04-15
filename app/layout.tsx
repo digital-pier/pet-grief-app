@@ -30,7 +30,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <div className="flex-1 flex flex-col">{children}</div>
         <footer className="border-t border-amber-900/10 py-4 text-center text-xs text-amber-900/60">
-          <a href="/terms" className="hover:underline">Terms of Service</a>
+          {/* <a href="/terms" className="hover:underline">Terms of Service</a> */}
         </footer>
       </body>
     </html>

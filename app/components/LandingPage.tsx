@@ -418,6 +418,24 @@ function CTASection() {
   );
 }
 
+// ── Footer ────────────────────────────────────────────────────────────────────
+
+function Footer() {
+  return (
+    <footer className="bg-[#fdf6ee] border-t border-amber-100 px-6 py-8 text-center text-xs text-amber-700/70">
+      <div className="flex justify-center gap-6 mb-2">
+        <Link href="/terms" className="hover:text-amber-900 transition-colors">
+          Terms of Service
+        </Link>
+        <Link href="/privacy" className="hover:text-amber-900 transition-colors">
+          Privacy Policy
+        </Link>
+      </div>
+      <p>&copy; {new Date().getFullYear()} Shared Leash. All rights reserved.</p>
+    </footer>
+  );
+}
+
 // ── Export ────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
@@ -430,6 +448,7 @@ export default function LandingPage() {
       <SampleSection />
       <CommunitySection />
       <CTASection />
+      <Footer />
     </div>
   );
 }
