@@ -165,7 +165,7 @@ export default function TermsPage() {
 
           <section id="privacy">
             <H2>7. Privacy</H2>
-            <p>Your use of the Service is subject to our Privacy Policy, which is incorporated into these Terms by reference. By using the Service, you consent to the collection and use of your information as described in our Privacy Policy. The Company processes emotional and grief-related data you share; please review the Privacy Policy to understand how this sensitive data is handled, stored, and protected.</p>
+            <p>Your use of the Service is subject to our <Link href="/privacy" className="text-amber-700 hover:underline">Privacy Policy</Link>, which is incorporated into these Terms by reference. By using the Service, you consent to the collection and use of your information as described in our Privacy Policy. The Company processes emotional and grief-related data you share; please review the <Link href="/privacy" className="text-amber-700 hover:underline">Privacy Policy</Link> to understand how this sensitive data is handled, stored, and protected.</p>
           </section>
 
           <section id="liability">
