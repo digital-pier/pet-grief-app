@@ -6,6 +6,7 @@ import LandingPage from "@/app/components/LandingPage";
 export default async function Home() {
   const session = await getSession();
   if (!session) return <LandingPage />;
+  if (!session.emailVerified) redirect("/auth/verify-pending");
 
   const { prisma } = await import("@/lib/prisma");
   const { conversationsDb } = await import("@/lib/db");
