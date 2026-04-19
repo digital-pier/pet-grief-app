@@ -196,6 +196,13 @@ export async function POST(request: Request) {
     });
   }
 
+  if (!user.emailVerified) {
+    return new Response(JSON.stringify({ error: "Email not verified" }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const { messages } = await request.json();
 
   // Crisis signal detection (server-side)

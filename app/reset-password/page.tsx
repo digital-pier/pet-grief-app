@@ -30,8 +30,7 @@ function ResetPasswordForm() {
   return (
     <div className="w-full max-w-sm">
       <div className="text-center mb-8">
-        <span className="text-5xl">🐾</span>
-        <h1 className="text-3xl font-bold text-amber-900 mt-3">Shared Leash</h1>
+        <img src="/sharedleash-logo.png" alt="SharedLeash" style={{height: "100px", width: "auto"}} className="mx-auto" />
         <p className="text-amber-700 text-sm mt-1">Choose a new password</p>
       </div>
 

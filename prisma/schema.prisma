@@ -34,6 +34,11 @@ model User {
   passwordResetToken     String?    @unique @map("password_reset_token")
   passwordResetExpiry    DateTime?  @map("password_reset_expiry")
 
+  // Email verification
+  emailVerified              DateTime?  @map("email_verified")
+  emailVerificationToken     String?    @unique @map("email_verification_token")
+  emailVerificationExpiry    DateTime?  @map("email_verification_expiry")
+
   conversation       Conversation?
   subscriptions      Subscription[]
 

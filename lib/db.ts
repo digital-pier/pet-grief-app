@@ -3,6 +3,7 @@ export interface User {
   name: string;
   email: string;
   password_hash: string;
+  emailVerified: Date | null;
 }
 
 export interface Message {
@@ -10,8 +11,8 @@ export interface Message {
   content: string;
 }
 
-function toUser(row: { id: number; name: string; email: string; passwordHash: string }): User {
-  return { id: row.id, name: row.name, email: row.email, password_hash: row.passwordHash };
+function toUser(row: { id: number; name: string; email: string; passwordHash: string; emailVerified: Date | null }): User {
+  return { id: row.id, name: row.name, email: row.email, password_hash: row.passwordHash, emailVerified: row.emailVerified };
 }
 
 export const usersDb = {
@@ -54,6 +55,28 @@ export const usersDb = {
     await prisma.user.update({
       where: { email },
       data: { passwordHash, passwordResetToken: null, passwordResetExpiry: null },
+    });
+  },
+
+  async setEmailVerificationToken(userId: number, token: string, expiry: Date): Promise<void> {
+    const { prisma } = await import("./prisma");
+    await prisma.user.update({
+      where: { id: userId },
+      data: { emailVerificationToken: token, emailVerificationExpiry: expiry },
+    });
+  },
+
+  async findByEmailVerificationToken(token: string): Promise<User | undefined> {
+    const { prisma } = await import("./prisma");
+    const row = await prisma.user.findUnique({ where: { emailVerificationToken: token } });
+    return row ? toUser(row) : undefined;
+  },
+
+  async markEmailVerified(userId: number): Promise<void> {
+    const { prisma } = await import("./prisma");
+    await prisma.user.update({
+      where: { id: userId },
+      data: { emailVerified: new Date(), emailVerificationToken: null, emailVerificationExpiry: null },
     });
   },
 };

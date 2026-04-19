@@ -1,9 +1,10 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { usersDb } from "@/lib/db";
-import { sendWelcomeEmail } from "@/lib/email";
+import { sendEmailVerificationEmail } from "@/lib/email";
 import { createSession, deleteSession } from "@/lib/session";
 
 export type AuthFormState =
@@ -44,12 +45,16 @@ export async function signup(state: AuthFormState, formData: FormData): Promise<
     return { message: "Something went wrong creating your account. Please try again." };
   }
 
-  await createSession(user.id);
+  const verificationToken = randomUUID();
+  const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  await usersDb.setEmailVerificationToken(user.id, verificationToken, verificationExpiry);
 
-  // Fire welcome email async — don't block the redirect
-  sendWelcomeEmail(email, name).catch(() => {});
+  await createSession(user.id, email, null);
 
-  redirect("/");
+  // Fire verification email async — don't block the redirect
+  sendEmailVerificationEmail(email, name, verificationToken).catch(() => {});
+
+  redirect("/auth/verify-pending");
 }
 
 export async function login(state: AuthFormState, formData: FormData): Promise<AuthFormState> {
@@ -70,7 +75,7 @@ export async function login(state: AuthFormState, formData: FormData): Promise<A
     return { message: "Incorrect password. Please try again." };
   }
 
-  await createSession(user.id);
+  await createSession(user.id, user.email, user.emailVerified);
   redirect("/");
 }
 

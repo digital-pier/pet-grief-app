@@ -82,11 +82,8 @@ function Nav() {
   return (
     <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-sm border-b border-amber-100">
       <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <PawIcon className="w-5 h-5 text-amber-600" />
-          <span className="font-semibold text-amber-900 text-lg tracking-tight">
-            Shared Leash
-          </span>
+        <div className="flex items-center">
+          <img src="/sharedleash-logo.png" alt="SharedLeash" style={{height: "48px", width: "auto"}} className="object-contain" />
         </div>
         <div className="flex items-center gap-5">
           <a
