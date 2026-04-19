@@ -11,8 +11,7 @@ export default function ForgotPasswordPage() {
     <div className="min-h-screen bg-gradient-to-b from-[#fdf6ee] to-[#fce8d5] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <span className="text-5xl">🐾</span>
-          <h1 className="text-3xl font-bold text-amber-900 mt-3">Shared Leash</h1>
+          <img src="/sharedleash-logo.png" alt="SharedLeash" style={{height: "100px", width: "auto"}} className="mx-auto" />
           <p className="text-amber-700 text-sm mt-1">Reset your password</p>
         </div>
 

@@ -10,11 +10,18 @@ function getEncodedKey(): Uint8Array {
 
 export interface SessionPayload {
   userId: number;
+  email: string;
+  emailVerified: Date | null;
   expiresAt: Date;
 }
 
 export async function encrypt(payload: SessionPayload): Promise<string> {
-  return new SignJWT({ userId: payload.userId, expiresAt: payload.expiresAt.toISOString() })
+  return new SignJWT({
+    userId: payload.userId,
+    email: payload.email,
+    emailVerified: payload.emailVerified ? payload.emailVerified.toISOString() : null,
+    expiresAt: payload.expiresAt.toISOString(),
+  })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
@@ -26,6 +33,8 @@ export async function decrypt(session: string | undefined = ""): Promise<Session
     const { payload } = await jwtVerify(session, getEncodedKey(), { algorithms: ["HS256"] });
     return {
       userId: payload.userId as number,
+      email: (payload.email as string) ?? "",
+      emailVerified: payload.emailVerified ? new Date(payload.emailVerified as string) : null,
       expiresAt: new Date(payload.expiresAt as string),
     };
   } catch {
@@ -33,9 +42,9 @@ export async function decrypt(session: string | undefined = ""): Promise<Session
   }
 }
 
-export async function createSession(userId: number): Promise<void> {
+export async function createSession(userId: number, email: string, emailVerified: Date | null): Promise<void> {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  const session = await encrypt({ userId, expiresAt });
+  const session = await encrypt({ userId, email, emailVerified, expiresAt });
   const cookieStore = await cookies();
   cookieStore.set("session", session, {
     httpOnly: true,
