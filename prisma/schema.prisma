@@ -41,6 +41,7 @@ model User {
 
   conversation       Conversation?
   subscriptions      Subscription[]
+  chatLogs           ChatLog[]
 
   @@map("users")
 }
@@ -53,6 +54,23 @@ model Conversation {
   user User @relation(fields: [userId], references: [id])
 
   @@map("conversations")
+}
+
+model ChatLog {
+  id                  Int      @id @default(autoincrement())
+  requestId           String   @map("request_id")
+  userId              Int      @map("user_id")
+  model               String
+  inputTokens         Int      @map("input_tokens")
+  outputTokens        Int      @map("output_tokens")
+  cacheCreationTokens Int      @default(0) @map("cache_creation_tokens")
+  cacheReadTokens     Int      @default(0) @map("cache_read_tokens")
+  serviceTier         String   @default("standard") @map("service_tier")
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("chat_logs")
 }
 
 model Subscription {

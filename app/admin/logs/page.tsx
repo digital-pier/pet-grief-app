@@ -3,44 +3,40 @@ export const dynamic = "force-dynamic";
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import { getAdminVerification } from "@/lib/admin-session";
-import AdminPanel from "@/app/components/AdminPanel";
+import AdminLogs from "@/app/components/AdminLogs";
 
-export default async function Admin() {
+export default async function AdminLogsPage() {
   const session = await getSession();
   if (!session) redirect("/login");
 
   const { prisma } = await import("@/lib/prisma");
-
   const currentUser = await prisma.user.findUnique({ where: { id: session.userId } });
   if (!currentUser?.isAdmin) redirect("/");
 
   const verified = await getAdminVerification();
   if (!verified || verified.userId !== session.userId) redirect("/admin/auth");
 
-  const users = await prisma.user.findMany({
-    select: {
-      id: true,
-      name: true,
-      email: true,
-      createdAt: true,
-      subscriptionStatus: true,
-      planTier: true,
-      crisisSignal: true,
-      crisisSignalAt: true,
-      monthlyChatsUsed: true,
-      isAdmin: true,
-    },
+  const logs = await prisma.chatLog.findMany({
+    take: 200,
     orderBy: { createdAt: "desc" },
+    include: { user: { select: { email: true } } },
   });
 
   return (
-    <AdminPanel
-      users={users.map((u) => ({
-        ...u,
-        createdAt: u.createdAt.toISOString(),
-        crisisSignalAt: u.crisisSignalAt?.toISOString() ?? null,
+    <AdminLogs
+      logs={logs.map((l) => ({
+        id: l.id,
+        requestId: l.requestId,
+        userId: l.userId,
+        userEmail: l.user.email,
+        model: l.model,
+        inputTokens: l.inputTokens,
+        outputTokens: l.outputTokens,
+        cacheCreationTokens: l.cacheCreationTokens,
+        cacheReadTokens: l.cacheReadTokens,
+        serviceTier: l.serviceTier,
+        createdAt: l.createdAt.toISOString(),
       }))}
-      totalUsers={users.length}
     />
   );
 }

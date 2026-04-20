@@ -21,6 +21,7 @@ export default async function Home() {
       initialMessages={history}
       userName={user.name}
       userCrisisSignal={user.crisisSignal}
+      isAdmin={user.isAdmin}
     />
   );
 }

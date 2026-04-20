@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+
 interface UserRow {
   id: number;
   name: string;
@@ -47,10 +48,16 @@ export default function AdminPanel({ users, totalUsers }: Props) {
       <header className="bg-white/80 backdrop-blur-sm border-b border-amber-100 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center gap-3">
           <span className="text-4xl">🐾</span>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-amber-900 tracking-tight">
-              Admin Panel
-            </h1>
+          <div className="flex-1 flex items-center gap-6">
+            <h1 className="text-2xl font-bold text-amber-900 tracking-tight">Admin</h1>
+            <nav className="flex gap-4 text-sm">
+              <span className="font-semibold text-amber-900 border-b-2 border-amber-400 pb-0.5">
+                Users
+              </span>
+              <Link href="/admin/logs" className="text-amber-600 hover:text-amber-900 transition-colors">
+                Logs
+              </Link>
+            </nav>
             <p className="text-sm text-amber-700">
               {totalUsers} registered {totalUsers === 1 ? "user" : "users"}
             </p>

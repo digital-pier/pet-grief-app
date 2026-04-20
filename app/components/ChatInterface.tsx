@@ -26,9 +26,10 @@ interface Props {
   initialMessages: Message[];
   userName: string;
   userCrisisSignal: boolean;
+  isAdmin: boolean;
 }
 
-export default function ChatInterface({ initialMessages, userName, userCrisisSignal }: Props) {
+export default function ChatInterface({ initialMessages, userName, userCrisisSignal, isAdmin }: Props) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -170,6 +171,14 @@ export default function ChatInterface({ initialMessages, userName, userCrisisSig
                 className="text-xs text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg px-3 py-1.5 transition-colors font-medium"
               >
                 Talk to a Human
+              </a>
+            )}
+            {isAdmin && (
+              <a
+                href="/admin/auth"
+                className="text-xs text-amber-600 hover:text-amber-900 border border-amber-200 hover:border-amber-400 rounded-lg px-3 py-1.5 transition-colors"
+              >
+                Admin
               </a>
             )}
             <a
