@@ -84,9 +84,9 @@ export default function RegisterPage() {
               />
               <label htmlFor="acknowledgement" className="text-xs text-amber-800 leading-relaxed">
                 I&apos;m registering because I&apos;m grieving a pet loss, supporting someone who is, or exploring the product professionally. I agree to the{" "}
-                <Link href="/privacy" className="font-medium text-amber-900 underline">Privacy Policy</Link>
+                <Link href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-amber-900 underline">Privacy Policy</Link>
                 {" "}and{" "}
-                <Link href="/terms" className="font-medium text-amber-900 underline">Terms of Service</Link>.
+                <Link href="/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-amber-900 underline">Terms of Service</Link>.
               </label>
             </div>
             {state?.errors?.acknowledgement && (
@@ -110,7 +110,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-amber-700 mt-6">
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-amber-900 underline">
+            <Link href="/login" target="_blank" rel="noopener noreferrer" className="font-medium text-amber-900 underline">
               Sign in
             </Link>
           </p>
