@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface UserRow {
   id: number;
@@ -21,6 +23,25 @@ interface Props {
 }
 
 export default function AdminPanel({ users, totalUsers }: Props) {
+  const router = useRouter();
+  const [deleting, setDeleting] = useState<number | null>(null);
+
+  async function handleDelete(user: UserRow) {
+    if (!confirm(`Delete account for ${user.email}? This cannot be undone.`)) return;
+    setDeleting(user.id);
+    try {
+      const res = await fetch(`/api/admin/users/${user.id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const { error } = await res.json();
+        alert(error ?? "Failed to delete user");
+      } else {
+        router.refresh();
+      }
+    } finally {
+      setDeleting(null);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fdf6ee] to-[#fce8d5]">
       <header className="bg-white/80 backdrop-blur-sm border-b border-amber-100 shadow-sm">
@@ -55,6 +76,7 @@ export default function AdminPanel({ users, totalUsers }: Props) {
                   <th className="text-left px-4 py-3 font-semibold text-amber-900">Plan</th>
                   <th className="text-left px-4 py-3 font-semibold text-amber-900">Chats</th>
                   <th className="text-left px-4 py-3 font-semibold text-amber-900">Status</th>
+                  <th className="px-4 py-3" />
                 </tr>
               </thead>
               <tbody>
@@ -92,6 +114,17 @@ export default function AdminPanel({ users, totalUsers }: Props) {
                             </span>
                           )}
                         </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {!user.isAdmin && (
+                        <button
+                          onClick={() => handleDelete(user)}
+                          disabled={deleting === user.id}
+                          className="text-xs text-red-600 hover:text-red-800 border border-red-200 hover:border-red-400 rounded-lg px-2 py-1 transition-colors disabled:opacity-50"
+                        >
+                          {deleting === user.id ? "Deleting…" : "Delete"}
+                        </button>
                       )}
                     </td>
                   </tr>
