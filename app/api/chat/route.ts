@@ -267,6 +267,23 @@ export async function POST(request: Request) {
         cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
       };
       console.log("[CACHE STATS]", JSON.stringify(cacheStats));
+
+      try {
+        await prisma.chatLog.create({
+          data: {
+            requestId: finalMsg.id,
+            userId: session.userId,
+            model: finalMsg.model,
+            inputTokens: usage.input_tokens,
+            outputTokens: usage.output_tokens,
+            cacheCreationTokens: usage.cache_creation_input_tokens ?? 0,
+            cacheReadTokens: usage.cache_read_input_tokens ?? 0,
+            serviceTier: (finalMsg as { service_tier?: string }).service_tier ?? "standard",
+          },
+        });
+      } catch (e) {
+        console.error("[CHAT LOG ERROR]", e);
+      }
       controller.enqueue(
         encoder.encode(`data: ${JSON.stringify({ cache_stats: cacheStats })}\n\n`)
       );
