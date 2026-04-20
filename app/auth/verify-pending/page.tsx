@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getSession } from "@/lib/session";
+import { usersDb } from "@/lib/db";
 import ResendButton from "./ResendButton";
 
 export default async function VerifyPendingPage({
@@ -11,6 +12,12 @@ export default async function VerifyPendingPage({
   const session = await getSession();
   if (!session) redirect("/login");
   if (session.emailVerified) redirect("/");
+
+  // Session JWT may be stale — check DB for actual verification status
+  const user = await usersDb.findById(session.userId);
+  if (user?.emailVerified) {
+    redirect("/api/auth/refresh-session");
+  }
 
   const { error } = await searchParams;
 
