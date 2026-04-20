@@ -13,6 +13,7 @@ export type AuthFormState =
         name?: string[];
         email?: string[];
         password?: string[];
+        acknowledgement?: string[];
       };
       message?: string;
     }
@@ -22,12 +23,14 @@ export async function signup(state: AuthFormState, formData: FormData): Promise<
   const name = (formData.get("name") as string | null)?.trim() ?? "";
   const email = (formData.get("email") as string | null)?.trim().toLowerCase() ?? "";
   const password = (formData.get("password") as string | null) ?? "";
+  const acknowledgement = formData.get("acknowledgement");
 
   const errors: NonNullable<AuthFormState>["errors"] = {};
 
   if (name.length < 2) errors.name = ["Name must be at least 2 characters."];
   if (!email.includes("@")) errors.email = ["Please enter a valid email."];
   if (password.length < 8) errors.password = ["Password must be at least 8 characters."];
+  if (!acknowledgement) errors.acknowledgement = ["You must acknowledge this before registering."];
 
   if (Object.keys(errors).length > 0) return { errors };
 

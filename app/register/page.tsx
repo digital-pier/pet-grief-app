@@ -73,6 +73,26 @@ export default function RegisterPage() {
               )}
             </div>
 
+            <div className="flex items-start gap-3">
+              <input
+                id="acknowledgement"
+                name="acknowledgement"
+                type="checkbox"
+                value="yes"
+                required
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-amber-300 text-amber-600 accent-amber-600"
+              />
+              <label htmlFor="acknowledgement" className="text-xs text-amber-800 leading-relaxed">
+                I&apos;m registering because I&apos;m grieving a pet loss, supporting someone who is, or exploring the product professionally. I agree to the{" "}
+                <Link href="/privacy" className="font-medium text-amber-900 underline">Privacy Policy</Link>
+                {" "}and{" "}
+                <Link href="/terms" className="font-medium text-amber-900 underline">Terms of Service</Link>.
+              </label>
+            </div>
+            {state?.errors?.acknowledgement && (
+              <p className="text-xs text-red-600 -mt-2">{state.errors.acknowledgement[0]}</p>
+            )}
+
             {state?.message && (
               <p className="text-sm text-red-600 bg-red-50 rounded-xl px-4 py-2">
                 {state.message}
@@ -90,7 +110,7 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-amber-700 mt-6">
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-amber-900 hover:underline">
+            <Link href="/login" className="font-medium text-amber-900 underline">
               Sign in
             </Link>
           </p>
