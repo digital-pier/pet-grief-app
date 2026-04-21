@@ -57,6 +57,26 @@ export async function sendEmailVerificationEmail(email: string, name: string, to
   });
 }
 
+export async function sendAdminRegistrationNotification(email: string, name: string): Promise<void> {
+  await resend.emails.send({
+    from: FROM_EMAIL,
+    to: "ricklowe.tech@gmail.com",
+    subject: "New Shared Leash registration",
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px;">
+        <h2 style="color: #78350f;">New registration</h2>
+        <p style="color: #92400e; line-height: 1.6;">
+          A new user just signed up for Shared Leash.
+        </p>
+        <p style="color: #92400e; line-height: 1.6;">
+          <strong>Name:</strong> ${name}<br />
+          <strong>Email:</strong> ${email}
+        </p>
+      </div>
+    `,
+  });
+}
+
 export async function sendWelcomeEmail(email: string, name: string): Promise<void> {
   const appUrl = process.env.APP_URL || "http://localhost:3000";
   const firstName = name.split(" ")[0];
