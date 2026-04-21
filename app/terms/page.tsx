@@ -109,7 +109,7 @@ export default function TermsPage() {
         <div className="space-y-12 [&_p]:mb-4 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:space-y-1.5 [&_ul]:mb-4 [&_strong]:font-semibold [&_strong]:text-amber-950 [&_section]:scroll-mt-24">
           <section id="acceptance">
             <H2>1. Acceptance of terms</H2>
-            <p>These Terms of Service (&quot;Terms&quot;) constitute a legally binding agreement between you (&quot;User,&quot; &quot;you,&quot; or &quot;your&quot;) and Shared Leash LLC, an Ohio limited liability company (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;), governing your access to and use of the Shared Leash platform, website, mobile application, and all related services (collectively, the &quot;Service&quot;).</p>
+            <p>These Terms of Service (&quot;Terms&quot;) constitute a legally binding agreement between you (&quot;User,&quot; &quot;you,&quot; or &quot;your&quot;) and DIGITAL PIER LLC, an Ohio limited liability company (&quot;Company,&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;), governing your access to and use of the Shared Leash platform, website, mobile application, and all related services (collectively, the &quot;Service&quot;).</p>
             <p>By creating an account, accessing the Service, or clicking &quot;I agree,&quot; you acknowledge that you have read, understood, and agree to be bound by these Terms and our Privacy Policy. <strong>If you do not agree, do not use the Service.</strong></p>
           </section>
 
@@ -204,10 +204,9 @@ export default function TermsPage() {
             <H2>13. Contact</H2>
             <p>Questions about these Terms may be directed to:</p>
             <div className="bg-white border border-amber-100 rounded-2xl px-6 py-5 mt-4 text-sm text-amber-800 leading-loose">
-              <strong className="block text-amber-950 text-base mb-1">Shared Leash LLC</strong>
-              Northeast Ohio, United States<br />
-              Email: <a href="mailto:legal@sharedleash.com" className="text-amber-700 hover:underline">legal@sharedleash.com</a><br />
-              Website: <a href="https://sharedleash.com" target="_blank" rel="noreferrer" className="text-amber-700 hover:underline">sharedleash.com</a>
+              <strong className="block text-amber-950 text-base mb-1">DIGITAL PIER LLC</strong>
+              Cleveland, OH<br />
+              Email: <a href="mailto:contact@sharedleash.com" className="text-amber-700 hover:underline">contact@sharedleash.com</a>
             </div>
           </section>
         </div>
