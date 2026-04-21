@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import { randomUUID } from "crypto";
 import { redirect } from "next/navigation";
 import { usersDb } from "@/lib/db";
-import { sendEmailVerificationEmail } from "@/lib/email";
+import { sendAdminRegistrationNotification, sendEmailVerificationEmail } from "@/lib/email";
 import { createSession, deleteSession } from "@/lib/session";
 
 export type AuthFormState =
@@ -56,6 +56,7 @@ export async function signup(state: AuthFormState, formData: FormData): Promise<
 
   // Fire verification email async — don't block the redirect
   sendEmailVerificationEmail(email, name, verificationToken).catch(() => {});
+  sendAdminRegistrationNotification(email, name).catch(() => {});
 
   redirect("/auth/verify-pending");
 }
