@@ -106,6 +106,12 @@ function Nav() {
           </Link>
         </div>
       </div>
+      <div
+        role="alert"
+        className="bg-amber-900 text-amber-50 text-center text-xs sm:text-sm font-semibold tracking-wide px-4 py-2.5 border-t border-amber-950"
+      >
+        ⚠️ THIS SITE IS CURRENTLY IN TESTING MODE — IT IS NOT AN ACTIVE BUSINESS
+      </div>
     </nav>
   );
 }
@@ -114,7 +120,7 @@ function Nav() {
 
 function HeroSection() {
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-28 pb-24 overflow-hidden bg-gradient-to-b from-[#fdf6ee] to-[#fce8d5]">
+    <section className="relative min-h-screen flex flex-col items-center justify-center text-center px-6 pt-40 pb-24 overflow-hidden bg-gradient-to-b from-[#fdf6ee] to-[#fce8d5]">
       <div className="absolute inset-0 pointer-events-none" aria-hidden="true">
         <svg
           className="absolute inset-0 w-full h-full"
