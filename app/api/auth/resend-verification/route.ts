@@ -2,11 +2,17 @@ import { randomUUID } from "crypto";
 import { getSession } from "@/lib/session";
 import { usersDb } from "@/lib/db";
 import { sendEmailVerificationEmail } from "@/lib/email";
+import { rateLimit } from "@/lib/rate-limit";
 
 export async function POST() {
   const session = await getSession();
   if (!session) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // 1 resend per minute per user
+  if (!rateLimit(`resend-verify:${session.userId}`, 1, 60 * 1000)) {
+    return Response.json({ error: "Please wait before requesting another verification email." }, { status: 429 });
   }
 
   const user = await usersDb.findById(session.userId);
