@@ -4,6 +4,8 @@ export interface User {
   email: string;
   password_hash: string;
   emailVerified: Date | null;
+  failedLoginAttempts: number;
+  lockedUntil: Date | null;
 }
 
 export interface Message {
@@ -11,9 +13,28 @@ export interface Message {
   content: string;
 }
 
-function toUser(row: { id: number; name: string; email: string; passwordHash: string; emailVerified: Date | null }): User {
-  return { id: row.id, name: row.name, email: row.email, password_hash: row.passwordHash, emailVerified: row.emailVerified };
+function toUser(row: {
+  id: number;
+  name: string;
+  email: string;
+  passwordHash: string;
+  emailVerified: Date | null;
+  failedLoginAttempts: number;
+  lockedUntil: Date | null;
+}): User {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    password_hash: row.passwordHash,
+    emailVerified: row.emailVerified,
+    failedLoginAttempts: row.failedLoginAttempts,
+    lockedUntil: row.lockedUntil,
+  };
 }
+
+const LOCKOUT_THRESHOLD = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 export const usersDb = {
   async create(name: string, email: string, passwordHash: string): Promise<User> {
@@ -77,6 +98,29 @@ export const usersDb = {
     await prisma.user.update({
       where: { id: userId },
       data: { emailVerified: new Date(), emailVerificationToken: null, emailVerificationExpiry: null },
+    });
+  },
+
+  async recordFailedLogin(userId: number): Promise<void> {
+    const { prisma } = await import("./prisma");
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: { failedLoginAttempts: { increment: 1 } },
+      select: { failedLoginAttempts: true },
+    });
+    if (updated.failedLoginAttempts >= LOCKOUT_THRESHOLD) {
+      await prisma.user.update({
+        where: { id: userId },
+        data: { lockedUntil: new Date(Date.now() + LOCKOUT_DURATION_MS) },
+      });
+    }
+  },
+
+  async clearFailedLogin(userId: number): Promise<void> {
+    const { prisma } = await import("./prisma");
+    await prisma.user.update({
+      where: { id: userId },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
     });
   },
 };
