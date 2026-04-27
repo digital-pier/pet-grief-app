@@ -2,21 +2,22 @@
 
 ## Overview
 
-Shared Leash is a Next.js 16 App Router application. Server components handle data loading, client components handle interactive UI, and API routes serve the chat stream, Stripe integration, and cron jobs. SQLite (via Prisma) stores all persistent state.
+Shared Leash is a Next.js 16 App Router application. Server components handle data loading, client components handle interactive UI, and API routes serve the chat stream and auth flows. PostgreSQL (via Prisma 7 + Supabase) stores all persistent state.
 
 ```
 Browser
   |
   |-- Server Components (page.tsx, layout.tsx)
-  |     └── Prisma ──> SQLite (.data/shared-leash.db)
+  |     └── Prisma ──> PostgreSQL (Supabase)
   |
   |-- Client Components (ChatInterface, AccountPage)
   |     └── fetch() to API routes
   |
   |-- API Routes
-        ├── /api/chat ──> Anthropic Claude API (streaming)
-        ├── /api/stripe/* ──> Stripe API
-        └── /api/cron/* ──> scheduled maintenance
+        ├── /api/chat ──> Anthropic Claude API (streaming, cached)
+        ├── /api/auth/* ──> email verification, session refresh
+        ├── /api/logout ──> session teardown
+        └── /api/admin/* ──> admin user management
 ```
 
 ---
@@ -26,26 +27,59 @@ Browser
 Auth is a custom JWT implementation — no third-party auth provider.
 
 ```
-Register / Login
+Register
   └── app/actions/auth.ts (server action)
+        ├── IP rate limit: 3 signup attempts/hour
         ├── Validate input (name >=2, email format, password >=8)
-        ├── Signup: hash password (bcryptjs, 10 rounds) → create user in DB
-        │   Login: find user by email → bcrypt.compare
+        ├── Hash password (bcryptjs, 10 rounds) → create User in DB
+        ├── Generate emailVerificationToken (24-hour expiry) → store on User
+        └── Send verification email via Resend → /auth/verify?token=
+
+Email Verification
+  └── GET /auth/verify?token=
+        ├── Find user by emailVerificationToken, check expiry
+        ├── Set emailVerified=true, clear token fields
         └── createSession(userId) → lib/session.ts
-              ├── Sign JWT (HS256) with { userId, exp: 7 days }
-              └── Set HTTP-only cookie "session" (sameSite=lax, secure in prod)
+
+  POST /api/auth/resend-verification
+        └── Rate limit: 1 resend/minute per user
+
+Login
+  └── app/actions/auth.ts (server action)
+        ├── IP rate limit: 10 login attempts/15 min
+        ├── Find user by email → check lockedUntil (15-min lockout after 5 failures)
+        ├── bcrypt.compare → on failure: increment failedLoginAttempts
+        ├── On success: reset failedLoginAttempts → createSession(userId)
+        └── Requires emailVerified=true to access chat
 
 Every protected page / API route:
   └── getSession() → lib/session.ts
         ├── Read "session" cookie
-        ├── Verify JWT signature + expiration
+        ├── Verify JWT signature + expiration (jose library)
         └── Return { userId } or null (→ redirect to /login)
 ```
 
 **Key decisions:**
-- No refresh tokens — sessions simply expire after 7 days.
+- Sessions are HS256 JWTs in an HTTP-only cookie (7-day expiry, no refresh tokens).
 - Passwords are never stored in plaintext; only the bcrypt hash is persisted.
 - The `SESSION_SECRET` env var is the single signing key.
+- Users must verify email before accessing chat.
+- Account lockout (5 failures → 15-min lock) prevents brute force.
+
+---
+
+## Email
+
+Provider: **Resend** (`resend` package). All emails sent from `FROM_EMAIL` env var (e.g. `noreply@peternal.app`).
+
+| Email | Trigger |
+|-------|---------|
+| Verification | New signup |
+| Welcome | Email verified |
+| Password reset | Forgot-password request |
+| Admin registration notification | New signup (notifies admin address) |
+
+Password reset tokens have a 1-hour expiry. The forgot-password endpoint returns a generic success message regardless of whether the email exists.
 
 ---
 
@@ -56,141 +90,150 @@ User types message
   └── ChatInterface.tsx (client)
         ├── Append user message to local state
         ├── POST /api/chat  { messages: [...history, newMessage] }
-        │     └── API route (app/api/chat/route.ts)
+        │     └── app/api/chat/route.ts
         │           ├── Verify session (JWT cookie)
+        │           ├── Require emailVerified=true
         │           ├── Look up user (plan tier, monthly usage)
         │           ├── Free tier? Check monthlyChatsUsed < 5
         │           │     └── Increment counter in DB
+        │           ├── Crisis detection: regex on message content
+        │           │     └── Match → set crisisSignal=true, crisisSignalAt on User
+        │           ├── RAG: getRelevantChunks() → inject knowledge into system prompt
         │           ├── Call Anthropic SDK: client.messages.create({
-        │           │       model: "claude-opus-4-6",
+        │           │       model: "claude-sonnet-4-6",
         │           │       max_tokens: 1024,
-        │           │       system: <grief-companion prompt>,
-        │           │       messages: conversationHistory,
+        │           │       system: [grief-companion blocks w/ cache_control],
+        │           │       messages: conversationHistory (w/ cache breakpoint),
         │           │       stream: true
         │           │   })
         │           ├── Stream response chunks as SSE (text/event-stream)
-        │           └── On stream end: save full conversation to DB
+        │           └── On stream end:
+        │                 ├── Save full conversation to Conversation table
+        │                 └── Log token counts (incl. cache metrics) to ChatLog table
         └── Client accumulates streamed text, renders in real time
 ```
 
-**System prompt** instructs Claude to act as a compassionate grief counselor specializing in pet loss — validates grief, avoids clichés, addresses guilt around euthanasia decisions, and offers to refer to mental health professionals when appropriate.
+**System prompt** instructs Claude to act as a compassionate grief counselor specializing in pet loss — validates grief, avoids clichés, addresses guilt around euthanasia decisions, includes crisis protocol, and offers to refer to mental health professionals when appropriate.
 
-**Rate limiting:** Free-tier users get 5 chats per calendar month. The counter (`monthlyChatsUsed`) is stored on the User row and reset by a cron job.
+**Prompt caching:** System prompt blocks and conversation context carry `cache_control: { type: "ephemeral" }` breakpoints to reduce latency and cost on repeated turns.
+
+**RAG:** `lib/rag.ts` supplies relevant knowledge chunks injected into the system prompt per request.
+
+**Rate limiting:** Free-tier users get 5 chats per calendar month (`monthlyChatsUsed` on User row). Schema fields exist for a monthly reset cron (`monthlyChatsResetAt`) but the cron endpoint is not yet implemented.
 
 ---
 
-## Stripe Subscription Flow
+## Stripe Subscription (Planned)
 
-### Checkout (free → premium)
+Stripe is configured (env vars, schema fields on User and Subscription models) but API routes are **not yet implemented**. The schema supports:
+- `User.stripeCustomerId`, `planTier`, `subscriptionStatus`, `currentPeriodStart/End`, `cancelAtPeriodEnd`
+- `Subscription` records per billing cycle
 
-```
-User clicks "Upgrade" in ChatInterface or AccountPage
-  └── POST /api/stripe/create-checkout-session
-        ├── Verify session
-        ├── Find or create Stripe Customer (store stripeCustomerId on User)
-        ├── stripe.checkout.sessions.create({
-        │     mode: "subscription",
-        │     price: STRIPE_PREMIUM_PRICE_ID,  // $9.99/mo
-        │     success_url: /account?upgraded=true,
-        │     cancel_url: /account
-        │   })
-        └── Return checkout URL → client redirects
-```
+When implemented, the flow will mirror the original design: Checkout session → webhook handler → billing portal.
 
-### Webhook Processing
+---
 
-```
-Stripe sends POST /api/stripe/webhooks
-  ├── Verify signature (STRIPE_WEBHOOK_SECRET)
-  └── Handle event:
-        ├── customer.subscription.created
-        │   customer.subscription.updated
-        │     └── Update User: planTier, subscriptionStatus,
-        │         currentPeriodStart/End, cancelAtPeriodEnd
-        │         + upsert Subscription record
-        │
-        ├── customer.subscription.deleted
-        │     └── Revert User to free tier (planTier="free",
-        │         subscriptionStatus="canceled")
-        │
-        ├── invoice.payment_succeeded
-        │     └── Activate premium, reset monthlyChatsUsed to 0
-        │
-        └── invoice.payment_failed
-              └── Set subscriptionStatus="past_due"
-```
+## Admin Panel
 
-### Billing Portal
+`/admin` — protected by `User.isAdmin=true` check.
 
-```
-User clicks "Manage Billing" on AccountPage
-  └── POST /api/stripe/create-portal-session
-        └── Returns Stripe-hosted portal URL (update payment method, cancel, etc.)
-```
+- Lists all users with subscription status, monthly chat count, and crisis signal flags.
+- `DELETE /api/admin/users/[id]` — hard-deletes a user and all related records.
 
 ---
 
 ## Database Schema
 
-Three models in SQLite via Prisma:
+Four models in PostgreSQL via Prisma 7 + Supabase (Transaction Pooler, port 6543):
 
 ```
-┌──────────────────────────┐
-│          User            │
-├──────────────────────────┤
-│ id              Int PK   │
-│ name            String   │
-│ email           String U │  U = unique
-│ passwordHash    String   │
-│ createdAt       DateTime │
-│                          │
-│ stripeCustomerId String? │
-│ subscriptionStatus Str?  │
-│ planTier         String  │  "free" | "premium"
-│ currentPeriodStart DT?   │
-│ currentPeriodEnd   DT?   │
-│ cancelAtPeriodEnd  Bool  │
-│                          │
-│ monthlyChatsUsed  Int    │  reset monthly by cron
-│ monthlyChatsResetAt DT?  │
-├──────────────────────────┤
-│ 1:1  → Conversation      │
-│ 1:N  → Subscription      │
-└──────────────────────────┘
+┌──────────────────────────────────┐
+│              User                │
+├──────────────────────────────────┤
+│ id                    Int PK     │
+│ name                  String     │
+│ email                 String U   │  U = unique
+│ passwordHash          String     │
+│ createdAt             DateTime   │
+│ isAdmin               Bool       │
+│                                  │
+│ -- Auth security --              │
+│ failedLoginAttempts   Int        │
+│ lockedUntil           DateTime?  │
+│                                  │
+│ -- Email verification --         │
+│ emailVerified         Bool       │
+│ emailVerificationToken String? U │
+│ emailVerificationExpiry DT?      │
+│                                  │
+│ -- Password reset --             │
+│ passwordResetToken    String? U  │
+│ passwordResetExpiry   DateTime?  │
+│                                  │
+│ -- Subscription (Stripe) --      │
+│ stripeCustomerId      String?    │
+│ subscriptionStatus    String?    │  default: "free"
+│ planTier              String     │  "free" | "premium"
+│ currentPeriodStart    DateTime?  │
+│ currentPeriodEnd      DateTime?  │
+│ cancelAtPeriodEnd     Bool       │
+│                                  │
+│ -- Usage --                      │
+│ monthlyChatsUsed      Int        │
+│ monthlyChatsResetAt   DateTime?  │
+│                                  │
+│ -- Crisis detection --           │
+│ crisisSignal          Bool       │
+│ crisisSignalAt        DateTime?  │
+├──────────────────────────────────┤
+│ 1:1  → Conversation              │
+│ 1:N  → Subscription              │
+│ 1:N  → ChatLog                   │
+└──────────────────────────────────┘
 
 ┌──────────────────────────┐
 │      Conversation        │
 ├──────────────────────────┤
 │ userId    Int PK FK→User │
-│ messages  String (JSON)  │  stringified message array
+│ messages  String (JSON)  │  stringified message array, default "[]"
 │ updatedAt DateTime       │
 └──────────────────────────┘
 
-┌──────────────────────────┐
-│      Subscription        │
-├──────────────────────────┤
-│ id                Int PK │
-│ userId            Int FK │
-│ stripeSubscriptionId Str U│
-│ status            String │
-│ planTier          String │
-│ currentPeriodStart DT?   │
-│ currentPeriodEnd   DT?   │
-│ cancelAtPeriodEnd  Bool  │
-│ createdAt         DT     │
-│ updatedAt         DT     │
-└──────────────────────────┘
+┌──────────────────────────────┐
+│          ChatLog             │
+├──────────────────────────────┤
+│ id                 Int PK   │
+│ requestId          String   │
+│ userId             Int FK   │
+│ model              String   │
+│ inputTokens        Int      │
+│ outputTokens       Int      │
+│ cacheCreationTokens Int     │
+│ cacheReadTokens    Int      │
+│ serviceTier        String   │  default: "standard"
+│ createdAt          DateTime │
+└──────────────────────────────┘
+
+┌──────────────────────────────┐
+│        Subscription          │
+├──────────────────────────────┤
+│ id                   Int PK │
+│ userId               Int FK │
+│ stripeSubscriptionId Str U  │
+│ status               String │
+│ planTier             String │
+│ currentPeriodStart   DT?    │
+│ currentPeriodEnd     DT?    │
+│ cancelAtPeriodEnd    Bool   │
+│ createdAt            DT     │
+│ updatedAt            DT     │
+└──────────────────────────────┘
 ```
 
-**Note:** Conversation messages are stored as a single JSON string column rather than normalized rows. This keeps the schema simple for a 1:1 user-to-conversation model.
-
----
-
-## Cron: Monthly Chat Reset
-
-`GET /api/cron/reset-monthly-chats` (protected by `CRON_SECRET` bearer token)
-
-Resets `monthlyChatsUsed` to 0 for all free-tier users. Intended to be called once per month by an external scheduler (e.g., EasyCron, Vercel Cron, GitHub Actions).
+**Notes:**
+- Conversation messages are stored as a single JSON string column — one conversation per user.
+- ChatLog records every API call with full token/cache metrics for cost tracking.
+- Prisma 7 config lives in `prisma.config.ts` (not `schema.prisma`). PrismaClient is instantiated with `@prisma/adapter-pg` pointing at Supabase's Transaction Pooler.
 
 ---
 
@@ -199,8 +242,11 @@ Resets `monthlyChatsUsed` to 0 for all free-tier users. Intended to be called on
 | Concern | Approach |
 |---------|----------|
 | Password storage | bcryptjs (10 salt rounds) |
-| Session tokens | HS256 JWT in HTTP-only, sameSite=lax cookie |
-| Stripe webhooks | Signature verification via webhook secret |
-| Cron endpoint | Bearer token authorization |
+| Session tokens | HS256 JWT in HTTP-only, sameSite=lax cookie (jose) |
+| Brute force | Account lockout after 5 failures (15-min), IP rate limits on auth endpoints |
+| Email enumeration | Generic success responses on password reset |
+| Email verification | Required before chat access; 24-hour token expiry |
+| Crisis signals | Server-side regex detection; flagged on user record; visible to admin |
+| Stripe webhooks | Signature verification via webhook secret (when implemented) |
 | CSRF | sameSite=lax cookies + server actions |
 | XSS | HTTP-only cookies (JS cannot read session) |
