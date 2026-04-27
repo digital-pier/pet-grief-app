@@ -96,8 +96,10 @@ User types message
         │           ├── Look up user (plan tier, monthly usage)
         │           ├── Free tier? Check monthlyChatsUsed < 5
         │           │     └── Increment counter in DB
-        │           ├── Crisis detection: regex on message content
-        │           │     └── Match → set crisisSignal=true, crisisSignalAt on User
+        │           ├── Crisis detection: keyword match on last user message
+        │           │     └── On match → update User: crisisSignal=true,
+        │           │        crisisSignalAt, crisisSignalKeyword, crisisSignalExcerpt
+        │           │        (re-flags on every episode so admin can sort by recency)
         │           ├── RAG: getRelevantChunks() → inject knowledge into system prompt
         │           ├── Call Anthropic SDK: client.messages.create({
         │           │       model: "claude-sonnet-4-6",
@@ -108,6 +110,9 @@ User types message
         │           │   })
         │           ├── Stream response chunks as SSE (text/event-stream)
         │           └── On stream end:
+        │                 ├── Output validation: regex scan for dose patterns
+        │                 │     and euthanasia drug names → log to OutputFlag
+        │                 │     table (does not block delivery)
         │                 ├── Save full conversation to Conversation table
         │                 └── Log token counts (incl. cache metrics) to ChatLog table
         └── Client accumulates streamed text, renders in real time
@@ -185,10 +190,13 @@ Four models in PostgreSQL via Prisma 7 + Supabase (Transaction Pooler, port 6543
 │ -- Crisis detection --           │
 │ crisisSignal          Bool       │
 │ crisisSignalAt        DateTime?  │
+│ crisisSignalKeyword   String?    │  matched phrase from CRISIS_SIGNALS
+│ crisisSignalExcerpt   String?    │  first 500 chars of triggering message
 ├──────────────────────────────────┤
 │ 1:1  → Conversation              │
 │ 1:N  → Subscription              │
 │ 1:N  → ChatLog                   │
+│ 1:N  → OutputFlag                │
 └──────────────────────────────────┘
 
 ┌──────────────────────────┐
@@ -212,6 +220,17 @@ Four models in PostgreSQL via Prisma 7 + Supabase (Transaction Pooler, port 6543
 │ cacheReadTokens    Int      │
 │ serviceTier        String   │  default: "standard"
 │ createdAt          DateTime │
+└──────────────────────────────┘
+
+┌──────────────────────────────┐
+│         OutputFlag           │
+├──────────────────────────────┤
+│ id            Int PK         │
+│ userId        Int FK         │
+│ requestId     String         │  Anthropic message id
+│ flags         String         │  comma-joined red-flag pattern names
+│ outputExcerpt String         │  first 1000 chars of model response
+│ createdAt     DateTime       │
 └──────────────────────────────┘
 
 ┌──────────────────────────────┐
@@ -246,7 +265,8 @@ Four models in PostgreSQL via Prisma 7 + Supabase (Transaction Pooler, port 6543
 | Brute force | Account lockout after 5 failures (15-min), IP rate limits on auth endpoints |
 | Email enumeration | Generic success responses on password reset |
 | Email verification | Required before chat access; 24-hour token expiry |
-| Crisis signals | Server-side regex detection; flagged on user record; visible to admin |
+| Crisis signals | Keyword detection on user input; flag, keyword, and excerpt persisted on User; re-flags on every episode |
+| Output validation | Regex scan of model response for dose patterns and euthanasia drug names; logged to OutputFlag (non-blocking) |
 | Stripe webhooks | Signature verification via webhook secret (when implemented) |
 | CSRF | sameSite=lax cookies + server actions |
 | XSS | HTTP-only cookies (JS cannot read session) |
