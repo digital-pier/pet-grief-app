@@ -28,8 +28,10 @@ model User {
   lockedUntil         DateTime? @map("locked_until")
 
   // Crisis signal tracking
-  crisisSignal       Boolean        @default(false) @map("crisis_signal")
-  crisisSignalAt     DateTime?      @map("crisis_signal_at")
+  crisisSignal         Boolean   @default(false) @map("crisis_signal")
+  crisisSignalAt       DateTime? @map("crisis_signal_at")
+  crisisSignalExcerpt  String?   @map("crisis_signal_excerpt")
+  crisisSignalKeyword  String?   @map("crisis_signal_keyword")
 
   // Admin
   isAdmin            Boolean        @default(false) @map("is_admin")
@@ -46,6 +48,7 @@ model User {
   conversation       Conversation?
   subscriptions      Subscription[]
   chatLogs           ChatLog[]
+  outputFlags        OutputFlag[]
 
   @@map("users")
 }
@@ -75,6 +78,21 @@ model ChatLog {
   user User @relation(fields: [userId], references: [id])
 
   @@map("chat_logs")
+}
+
+model OutputFlag {
+  id            Int      @id @default(autoincrement())
+  userId        Int      @map("user_id")
+  requestId     String   @map("request_id")
+  flags         String
+  outputExcerpt String   @map("output_excerpt")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("output_flags")
 }
 
 model Subscription {

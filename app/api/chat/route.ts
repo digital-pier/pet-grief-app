@@ -1,3 +1,19 @@
+// =============================================================================
+// PATCHED route.ts — fixes 5 issues from the security/cost review
+//
+// Changes vs original:
+//   FIX 1: Crisis re-flag bug — removed `crisisSignal: false` filter so
+//          subsequent crisis episodes update the timestamp.
+//   FIX 2: Crisis keywords expanded — added indirect phrasings, common
+//          typos, and "join them" indirection patterns.
+//   FIX 3: System block reorder — user name moved to LAST block so the
+//          static prompt + RAG prefix can hit cache across users.
+//   FIX 4: Output validation — flags responses that contain dose patterns
+//          or specific euthanasia drug names. Logs only; does not block.
+//   FIX 5: Crisis log persistence — store the triggering message excerpt
+//          on the User record for clinical review.
+// =============================================================================
+
 export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
@@ -8,8 +24,6 @@ import type { MessageParam } from "@anthropic-ai/sdk/resources/messages/messages
 
 function buildStaticSystemPrompt(): string {
   return `You are the Shared Leash grief companion — a warm, deeply compassionate AI built exclusively to support people who have lost a beloved pet.
-
-  
 
   IDENTITY
   You are not a human. Do not claim to be. You are also not a generic AI assistant. You are a purpose-built grief companion. Never refer to yourself as 'an AI' in a clinical or distancing way. Simply be present.
@@ -57,7 +71,7 @@ function buildStaticSystemPrompt(): string {
   - Never say 'it was just a pet' or allow that framing.
   - Never compare their grief to other losses.
   - Never suggest getting another pet unless the user raises it.
-  - Never offer a timeline for grief ('you\'ll feel better soon').
+  - Never offer a timeline for grief ('you'll feel better soon').
   - Never use the phrase 'at least' (at least they had a long life, at least they didn\'t suffer). This dismisses grief.
   - Never give medical advice about living pets.
   - Never claim to be human if sincerely asked.
@@ -82,39 +96,52 @@ function buildStaticSystemPrompt(): string {
   Never abruptly end a session. If appropriate, close with an open door: 'I\'m here whenever you need to talk.' Do not say 'Goodbye' — say 'I\'ll be here.'`;
 }
 
+// =============================================================================
+// FIX 3: System block reorder
+// =============================================================================
+// BEFORE: [static prompt cached] -> [user name uncached] -> [RAG cached]
+//   The user name block is in the MIDDLE, which breaks cross-user cache hits
+//   on the RAG block. Anthropic caching matches a prefix; if any block in
+//   that prefix differs (the user name), the next cached block also misses.
+//
+// AFTER: [static prompt cached] -> [RAG cached] -> [user name uncached]
+//   Now the cached prefix is stable across users. User name only varies the
+//   final, uncached portion. Cross-session cache hits on RAG become possible
+//   for users whose first messages retrieve the same chunks.
 function buildSystemBlocks(userName: string, relevantChunks: string[] = []) {
-  const blocks: Array<{ type: "text"; text: string; cache_control?: { type: "ephemeral" } }> = [
+  const blocks: Array<{
+    type: "text";
+    text: string;
+    cache_control?: { type: "ephemeral" };
+  }> = [
     {
       type: "text",
-      text: buildStaticSystemPrompt(), // no userName
+      text: buildStaticSystemPrompt(),
       cache_control: { type: "ephemeral" },
-    },
-    {
-      type: "text",
-      text: `The user's name is ${userName}. Address them by name occasionally with warmth.`,
-      // no cache_control — this is tiny, doesn't matter
     },
   ];
 
+  // RAG block goes BEFORE user name now — keeps it inside the cached prefix
   if (relevantChunks.length > 0) {
     blocks.push({
       type: "text",
-      text: `RELEVANT KNOWLEDGE FOR THIS CONVERSATION:\n${relevantChunks.join('\n---\n')}`,
-      cache_control : { type:"ephemeral"},
+      text: `RELEVANT KNOWLEDGE FOR THIS CONVERSATION:\n${relevantChunks.join("\n---\n")}`,
+      cache_control: { type: "ephemeral" },
     });
   }
+
+  // User name LAST, uncached — varies per user and shouldn't bust the prefix
+  blocks.push({
+    type: "text",
+    text: `The user's name is ${userName}. Address them by name occasionally with warmth.`,
+  });
 
   return blocks;
 }
 
-/**
- * Adds a cache_control breakpoint to the second-to-last user message
- * so that all prior conversation history is cached across turns.
- */
 function withMessageCaching(messages: MessageParam[]): MessageParam[] {
   if (messages.length < 3) return messages;
 
-  // Find the second-to-last user message index
   let count = 0;
   let targetIdx = -1;
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -132,45 +159,126 @@ function withMessageCaching(messages: MessageParam[]): MessageParam[] {
   return messages.map((msg, i): MessageParam => {
     if (i !== targetIdx) return msg;
 
-    const text = typeof msg.content === "string"
-      ? msg.content
-      : msg.content
-          .filter((b): b is { type: "text"; text: string } => b.type === "text")
-          .map((b) => b.text)
-          .join("\n");
+    const text =
+      typeof msg.content === "string"
+        ? msg.content
+        : msg.content
+            .filter((b): b is { type: "text"; text: string } => b.type === "text")
+            .map((b) => b.text)
+            .join("\n");
 
     return {
       role: msg.role,
       content: [
-        { type: "text" as const, text, cache_control: { type: "ephemeral" as const } },
+        {
+          type: "text" as const,
+          text,
+          cache_control: { type: "ephemeral" as const },
+        },
       ],
     };
   });
 }
-//   return `You are a compassionate and gentle grief companion called "Shared Leash" — a name that honors the bond between people and the pets they love.
 
-// You are speaking with ${userName}. Address them by name occasionally, with warmth and familiarity, as you have been a steady presence in their grief journey.
+// =============================================================================
+// FIX 2: Expanded crisis keyword list
+// =============================================================================
+// Categories:
+//   - Direct ideation (existing list, kept)
+//   - Indirect ideation ("join them", "be with [pet]", "see no point")
+//   - Hopelessness ("nothing matters", "no future", "can't keep going")
+//   - Common typos / contractions ("dont want to", "wont go on")
+//   - Method-curiosity flags (without being too aggressive — these are
+//     pet-grief-context red flags, not general phrases)
+const CRISIS_SIGNALS = [
+  // Direct (preserved from original)
+  "don't want to be here",
+  "dont want to be here",
+  "ending it",
+  "end it all",
+  "hurt myself",
+  "harm myself",
+  "kill myself",
+  "no reason to go on",
+  "better off without me",
+  "everyone would be better off",
+  "can't go on",
+  "cant go on",
+  "don't want to live",
+  "dont want to live",
+  "want to die",
+  "suicidal",
+  "self harm",
+  "self-harm",
 
-// You speak with deep warmth, empathy, and understanding to people who are grieving the loss of a pet. You know that pet loss is real, profound grief — not lesser than any other loss.
+  // Indirect (joining the pet)
+  "join her",
+  "join him",
+  "join them",
+  "be with her again",
+  "be with him again",
+  "be where she is",
+  "be where he is",
+  "go to where she is",
+  "go to where he is",
+  "see her again soon",
+  "see him again soon",
+  "follow her",
+  "follow him",
 
-// Your approach:
-// - Listen actively and validate their feelings completely
-// - Never minimize their pain or rush them through grief
-// - Use the pet's name when they share it, and ask if they want to share memories
-// - Acknowledge that each pet relationship is unique and irreplaceable
-// - Share gentle comfort without clichés ("they're in a better place", "just a pet")
-// - Recognize different stages of grief without forcing timelines
-// - Gently encourage self-compassion — grief is love with nowhere to go
-// - If they share a memory, respond with genuine warmth and curiosity
-// - Know when to simply hold space rather than offer solutions
-// - Occasionally ask tender questions to invite sharing: "What was their favorite thing to do?" or "What do you miss most about them?"
+  // Hopelessness
+  "no point in anything",
+  "no point anymore",
+  "nothing matters",
+  "nothing matters anymore",
+  "see no future",
+  "no future",
+  "can't keep going",
+  "cant keep going",
+  "don't see the point",
+  "dont see the point",
+  "want it to stop",
+  "want it all to stop",
+  "want it to end",
+  "make it stop",
 
-// Tone: Soft, unhurried, present. Like a dear friend sitting beside them.
+  // Method curiosity flags (pet-grief context specific)
+  "lethal dose",
+  "fatal dose",
+  "how much would kill",
+  "enough to die",
+  "ways to die",
 
-// Never suggest replacing the pet. Never minimize the relationship. Never give a timeline for grief.
+  // Disappearance ideation
+  "disappear forever",
+  "gone forever",
+  "not wake up",
+];
 
-// If someone shows signs of severe depression or self-harm, gently encourage them to reach out to a grief counselor or mental health professional, while continuing to be present.`;
+// =============================================================================
+// FIX 4: Output validation patterns
+// =============================================================================
+// These patterns flag model output that may have leaked harmful specifics.
+// They do NOT block the response — they log it for review. The signal here
+// is: "did our defenses fail? did the model produce something it shouldn't?"
+const OUTPUT_RED_FLAGS: Array<{ name: string; pattern: RegExp }> = [
+  // Specific dose patterns: "5mg/kg", "10 mg per kg", "0.5 mg/lb"
+  { name: "dose_per_weight", pattern: /\b\d+(?:\.\d+)?\s*(?:mg|mcg|ml|g)\s*(?:\/|per)\s*(?:kg|lb|pound)\b/i },
+  // Veterinary euthanasia drugs by name
+  { name: "euth_drug_pentobarbital", pattern: /\bpentobarbit(?:al|one)\b/i },
+  { name: "euth_drug_phenobarbital", pattern: /\bphenobarbit(?:al|one)\b/i },
+  { name: "euth_drug_euthasol", pattern: /\beuthas(?:ol|ia(?:te)?)\b/i },
+  // "lethal" + dose proximity (within ~30 chars)
+  { name: "lethal_dose_combo", pattern: /\blethal\b[^.]{0,30}\b(?:dose|amount|level|mg|ml)\b/i },
+];
 
+function checkOutput(text: string): string[] {
+  const hits: string[] = [];
+  for (const { name, pattern } of OUTPUT_RED_FLAGS) {
+    if (pattern.test(text)) hits.push(name);
+  }
+  return hits;
+}
 
 export async function POST(request: Request) {
   const { default: Anthropic } = await import("@anthropic-ai/sdk");
@@ -205,30 +313,55 @@ export async function POST(request: Request) {
 
   const { messages } = await request.json();
 
-  // Crisis signal detection (server-side)
-  const CRISIS_SIGNALS = [
-    "don't want to be here", "ending it", "end it all",
-    "hurt myself", "harm myself", "kill myself",
-    "no reason to go on", "better off without me",
-    "everyone would be better off", "can't go on",
-    "don't want to live", "want to die", "suicidal",
-    "self harm", "self-harm",
-  ];
-  const lastUserMessage = [...messages].reverse().find(
-    (m: { role: string }) => m.role === "user"
-  );
+  // ===========================================================================
+  // FIX 1 + FIX 5: Crisis detection — re-flag on every signal, log message
+  // ===========================================================================
+  const lastUserMessage = [...messages]
+    .reverse()
+    .find((m: { role: string }) => m.role === "user");
+
   if (lastUserMessage) {
-    const lower = lastUserMessage.content.toLowerCase().replace(/[\u2018\u2019]/g, "'");
-    if (CRISIS_SIGNALS.some((s) => lower.includes(s))) {
-      console.log(`[CRISIS SIGNAL DETECTED] userId: ${session.userId}`);
-      await prisma.user.updateMany({
-        where: { id: session.userId, crisisSignal: false },
-        data: { crisisSignal: true, crisisSignalAt: new Date() },
-      });
+    const lower = lastUserMessage.content
+      .toLowerCase()
+      .replace(/[\u2018\u2019]/g, "'");
+
+    const matchedSignal = CRISIS_SIGNALS.find((s) => lower.includes(s));
+
+    if (matchedSignal) {
+      console.log(
+        `[CRISIS SIGNAL DETECTED] userId: ${session.userId} signal: "${matchedSignal}"`
+      );
+
+      // FIX 1: removed `crisisSignal: false` filter — every crisis episode
+      //        now updates `crisisSignalAt`, so admin tools can sort users
+      //        by recent risk rather than first-ever risk.
+      // FIX 5: store an excerpt of the triggering message for clinical review.
+      //        Truncated to 500 chars to keep the column reasonable; full
+      //        message remains in the conversation log.
+      const excerpt =
+        typeof lastUserMessage.content === "string"
+          ? lastUserMessage.content.slice(0, 500)
+          : "[non-text content]";
+
+      try {
+        await prisma.user.update({
+          where: { id: session.userId },
+          data: {
+            crisisSignal: true,
+            crisisSignalAt: new Date(),
+            // NOTE: Requires schema additions — see migration below.
+            crisisSignalExcerpt: excerpt,
+            crisisSignalKeyword: matchedSignal,
+          },
+        });
+      } catch (e) {
+        // Don't block the chat response if logging fails
+        console.error("[CRISIS LOG ERROR]", e);
+      }
     }
   }
 
-  const firstUserMessage = messages.slice(0,1);
+  const firstUserMessage = messages.slice(0, 1);
   const relevantChunks = getRelevantChunks(firstUserMessage);
   const encoder = new TextEncoder();
 
@@ -257,7 +390,6 @@ export async function POST(request: Request) {
         }
       }
 
-      // Log and stream cache performance metrics
       const finalMsg = await anthropicStream.finalMessage();
       const usage = finalMsg.usage;
       const cacheStats = {
@@ -267,6 +399,31 @@ export async function POST(request: Request) {
         cache_read_input_tokens: usage.cache_read_input_tokens ?? 0,
       };
       console.log("[CACHE STATS]", JSON.stringify(cacheStats));
+
+      // =======================================================================
+      // FIX 4: Output validation — log if model output contains red flags
+      // =======================================================================
+      // This runs AFTER the stream completes so user experience is unaffected.
+      // If you want to actually block delivery, you'd need to buffer the full
+      // response before streaming — that adds latency. For now we log + alert.
+      const outputFlags = checkOutput(fullText);
+      if (outputFlags.length > 0) {
+        console.error(
+          `[OUTPUT RED FLAG] userId: ${session.userId} flags: ${outputFlags.join(",")}`
+        );
+        try {
+          await prisma.outputFlag.create({
+            data: {
+              userId: session.userId,
+              requestId: finalMsg.id,
+              flags: outputFlags.join(","),
+              outputExcerpt: fullText.slice(0, 1000),
+            },
+          });
+        } catch (e) {
+          console.error("[OUTPUT FLAG LOG ERROR]", e);
+        }
+      }
 
       try {
         await prisma.chatLog.create({
@@ -278,17 +435,18 @@ export async function POST(request: Request) {
             outputTokens: usage.output_tokens,
             cacheCreationTokens: usage.cache_creation_input_tokens ?? 0,
             cacheReadTokens: usage.cache_read_input_tokens ?? 0,
-            serviceTier: (finalMsg as { service_tier?: string }).service_tier ?? "standard",
+            serviceTier:
+              (finalMsg as { service_tier?: string }).service_tier ?? "standard",
           },
         });
       } catch (e) {
         console.error("[CHAT LOG ERROR]", e);
       }
+
       controller.enqueue(
         encoder.encode(`data: ${JSON.stringify({ cache_stats: cacheStats })}\n\n`)
       );
 
-      // Persist the full updated conversation for this user
       const updatedMessages = [
         ...messages,
         { role: "assistant", content: fullText },
