@@ -88,13 +88,13 @@ function Nav() {
         <div className="flex items-center gap-5">
           <a
             href="#features"
-            className="hidden md:block text-sm text-amber-700 hover:text-amber-900 transition-colors"
+            className="hidden md:block text-base font-semibold text-amber-700 hover:text-amber-900 transition-colors"
           >
             How it works
           </a>
           <Link
             href="/login"
-            className="text-sm text-amber-700 hover:text-amber-900 transition-colors"
+            className="text-base font-semibold text-amber-700 hover:text-amber-900 transition-colors"
           >
             Sign in
           </Link>
@@ -186,12 +186,27 @@ function HeroSection() {
           loss of a beloved pet — available any time, ready to listen without
           judgment.
         </p>
-        <Link
+        {/* <Link
           href="/register"
           className="bg-amber-600 hover:bg-amber-700 text-white text-base font-medium px-8 py-4 rounded-2xl transition-colors shadow-sm"
         >
           Join the Community
-        </Link>
+        </Link> */}
+      </div>
+
+      <div className="relative w-full max-w-4xl mx-auto mt-16 px-2 sm:px-0">
+        <div className="aspect-video w-full overflow-hidden rounded-3xl border border-amber-200 shadow-lg bg-amber-50">
+          <video
+            className="w-full h-full object-cover"
+            src="/explainer.mp4"
+            autoPlay
+            muted
+            loop
+            controls
+            playsInline
+            preload="metadata"
+          />
+        </div>
       </div>
     </section>
   );
