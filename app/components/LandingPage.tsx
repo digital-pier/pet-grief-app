@@ -198,7 +198,7 @@ function HeroSection() {
         <div className="aspect-video w-full overflow-hidden rounded-3xl border border-amber-200 shadow-lg bg-amber-50">
           <video
             className="w-full h-full object-cover"
-            src="/explainer.mp4"
+            src="https://5zc4gl2i2b7dwyfc.private.blob.vercel-storage.com/explainer.mp4"
             autoPlay
             muted
             loop
