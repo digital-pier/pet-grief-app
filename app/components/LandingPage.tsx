@@ -193,6 +193,18 @@ function HeroSection() {
           Join the Community
         </Link>
       </div>
+
+      <div className="relative w-full max-w-4xl mx-auto mt-16 px-2 sm:px-0">
+        <div className="aspect-video w-full overflow-hidden rounded-3xl border border-amber-200 shadow-lg bg-amber-50">
+          <iframe
+            className="w-full h-full"
+            src="https://www.youtube.com/embed/C7fdGFCK1Eo?autoplay=1&mute=1&loop=1&playlist=C7fdGFCK1Eo&rel=0&modestbranding=1"
+            title="Shared Leash explainer"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        </div>
+      </div>
     </section>
   );
 }
