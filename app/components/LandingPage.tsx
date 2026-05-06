@@ -83,24 +83,30 @@ function Nav() {
     <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-sm border-b border-amber-100">
       <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
         <div className="flex items-center">
-          <img src="/sharedleash-logo.png" alt="SharedLeash" style={{height: "48px", width: "auto"}} className="object-contain" />
+          <img src="/sharedleash-logo.png" alt="SharedLeash" style={{height: "60px", width: "auto"}} className="object-contain" />
         </div>
         <div className="flex items-center gap-5">
           <a
             href="#features"
-            className="hidden md:block text-sm text-amber-700 hover:text-amber-900 transition-colors"
+            className="hidden md:block text-base font-medium text-amber-900 hover:text-amber-950 transition-colors"
           >
             How it works
           </a>
           <Link
+            href="/pricing"
+            className="text-base font-medium text-amber-900 hover:text-amber-950 transition-colors"
+          >
+            Pricing
+          </Link>
+          <Link
             href="/login"
-            className="text-sm text-amber-700 hover:text-amber-900 transition-colors"
+            className="text-base font-medium text-amber-900 hover:text-amber-950 transition-colors"
           >
             Sign in
           </Link>
           <Link
             href="/register"
-            className="text-sm bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl transition-colors"
+            className="text-base font-medium bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl transition-colors"
           >
             Join the Community
           </Link>
@@ -173,7 +179,7 @@ function HeroSection() {
       </div>
 
       <div className="relative max-w-3xl mx-auto flex flex-col items-center">
-        <span className="text-amber-600 text-sm font-medium tracking-widest uppercase mb-8">
+        <span className="text-amber-800 text-base font-semibold tracking-widest uppercase mb-8">
           Pet grief support
         </span>
         <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-amber-950 leading-[1.1] mb-7">
@@ -195,16 +201,18 @@ function HeroSection() {
       </div>
 
       <div className="relative w-full max-w-4xl mx-auto mt-16 px-2 sm:px-0">
-        <div className="aspect-video w-full overflow-hidden rounded-3xl border border-amber-200 shadow-lg bg-amber-50">
-          <iframe
-            className="w-full h-full"
-            src="https://www.youtube.com/embed/C7fdGFCK1Eo?autoplay=1&mute=1&loop=1&playlist=C7fdGFCK1Eo&rel=0&modestbranding=1"
-            title="Shared Leash explainer"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowFullScreen
-          />
-        </div>
-      </div>
+  <div className="aspect-video w-full overflow-hidden rounded-3xl border border-amber-200 shadow-lg bg-amber-50">
+    <iframe
+      className="w-full h-full"
+      src="https://www.youtube-nocookie.com/embed/C7fdGFCK1Eo?rel=0&modestbranding=1&playsinline=1&color=white"
+      title="Shared Leash explainer"
+      allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+      allowFullScreen
+      loading="lazy"
+      referrerPolicy="strict-origin-when-cross-origin"
+    />
+  </div>
+</div>
     </section>
   );
 }
@@ -439,6 +447,9 @@ function Footer() {
   return (
     <footer className="bg-[#fdf6ee] border-t border-amber-100 px-6 py-8 text-center text-xs text-amber-700/70">
       <div className="flex justify-center gap-6 mb-2">
+        <Link href="/pricing" className="hover:text-amber-900 transition-colors">
+          Pricing
+        </Link>
         <Link href="/terms" className="hover:text-amber-900 transition-colors">
           Terms of Service
         </Link>

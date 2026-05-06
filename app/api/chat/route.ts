@@ -294,7 +294,8 @@ export async function POST(request: Request) {
     }
   }
 
-  const firstUserMessage = messages.slice(0, 1);
+  
+      const firstUserMessage = messages.slice(0, 1);
   const relevantChunks = getRelevantChunks(firstUserMessage);
   const encoder = new TextEncoder();
 

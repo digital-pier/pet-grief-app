@@ -4,7 +4,7 @@ import { decrypt } from "@/lib/session";
 const publicRoutes = ["/login", "/register", "/forgot-password", "/reset-password"];
 // "/" is open to everyone — unauthenticated users see the landing page,
 // authenticated users see the chat. Neither should be redirected away.
-const openRoutes = ["/", "/terms", "/privacy"];
+const openRoutes = ["/", "/terms", "/privacy", "/pricing"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

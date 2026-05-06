@@ -337,7 +337,7 @@ export default function ChatInterface({ initialMessages, userName, userCrisisSig
               placeholder="Share what's in your heart… (Enter to send, Shift+Enter for new line)"
               rows={1}
               disabled={isLoading}
-              className="flex-1 resize-none rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 placeholder:text-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:opacity-50 leading-relaxed max-h-40 overflow-y-auto"
+              className="flex-1 resize-none rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 placeholder:text-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-300 disabled:opacity-50 leading-relaxed max-h-40 overflow-y-auto"
             />
             <button
               onClick={sendMessage}
@@ -354,7 +354,7 @@ export default function ChatInterface({ initialMessages, userName, userCrisisSig
               </svg>
             </button>
           </div>
-          <p className="text-center text-xs text-amber-400 mt-2">
+          <p className="text-center text-xs text-amber-700 mt-2">
             A safe space powered by compassionate AI • Not a substitute for professional grief counseling
           </p>
         </div>
