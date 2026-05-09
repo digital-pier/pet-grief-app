@@ -1,11 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import { Suspense, useActionState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { signup } from "@/app/actions/auth";
 
-export default function RegisterPage() {
+const ALLOWED_TIERS = new Set(["free", "companion", "support_plus"]);
+
+function RegisterForm() {
   const [state, action, pending] = useActionState(signup, undefined);
+  const searchParams = useSearchParams();
+  const rawTier = searchParams.get("tier");
+  const tier = rawTier && ALLOWED_TIERS.has(rawTier) ? rawTier : "free";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#fdf6ee] to-[#fce8d5] flex items-center justify-center px-4">
@@ -19,6 +25,7 @@ export default function RegisterPage() {
           <h2 className="text-xl font-semibold text-amber-900 mb-6">Create your account</h2>
 
           <form action={action} className="flex flex-col gap-4">
+            <input type="hidden" name="tier" value={tier} />
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-amber-800 mb-1">
                 Your name
@@ -117,5 +124,13 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
   );
 }

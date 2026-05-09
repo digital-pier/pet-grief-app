@@ -263,7 +263,7 @@ export default function PricingPage() {
               "Emotional support when you need it most",
             ]}
             bestFor="Anyone beginning their grief journey who needs immediate support and companionship."
-            ctaHref="/register"
+            ctaHref="/register?tier=free"
             ctaLabel="Start free"
           />
           <PricingCard
@@ -283,7 +283,7 @@ export default function PricingPage() {
               "Anniversary and remembrance support",
             ]}
             bestFor="Pet owners looking for ongoing emotional support and a deeper healing connection."
-            ctaHref="/register"
+            ctaHref="/register?tier=companion"
             ctaLabel="Choose Companion"
             highlight
             badge="★ Most Popular"
@@ -306,7 +306,7 @@ export default function PricingPage() {
               "Early access to new features",
             ]}
             bestFor="Users wanting long-term healing tools, deeper reflection, and lasting remembrance experiences."
-            ctaHref="/register"
+            ctaHref="/register?tier=support_plus"
             ctaLabel="Choose Support+"
           />
         </div>

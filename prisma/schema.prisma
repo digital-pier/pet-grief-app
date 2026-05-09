@@ -17,6 +17,7 @@ model User {
   stripeCustomerId   String?        @map("stripe_customer_id")
   subscriptionStatus String         @default("free") @map("subscription_status")
   planTier           String         @default("free") @map("plan_tier")
+  selectedTier       String         @default("free") @map("selected_tier")
   currentPeriodStart DateTime?      @map("current_period_start")
   currentPeriodEnd   DateTime?      @map("current_period_end")
   cancelAtPeriodEnd  Boolean        @default(false) @map("cancel_at_period_end")

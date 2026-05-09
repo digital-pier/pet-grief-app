@@ -37,10 +37,15 @@ const LOCKOUT_THRESHOLD = 5;
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
 export const usersDb = {
-  async create(name: string, email: string, passwordHash: string): Promise<User> {
+  async create(
+    name: string,
+    email: string,
+    passwordHash: string,
+    selectedTier: string = "free",
+  ): Promise<User> {
     const { prisma } = await import("./prisma");
     const row = await prisma.user.create({
-      data: { name, email, passwordHash },
+      data: { name, email, passwordHash, selectedTier },
     });
     return toUser(row);
   },

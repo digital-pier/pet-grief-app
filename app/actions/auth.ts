@@ -22,6 +22,7 @@ export type AuthFormState =
   | undefined;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+const ALLOWED_TIERS = new Set(["free", "companion", "support_plus"]);
 
 function validatePassword(password: string): string | null {
   if (password.length < 8) return "Password must be at least 8 characters.";
@@ -45,6 +46,8 @@ export async function signup(state: AuthFormState, formData: FormData): Promise<
   const email = (formData.get("email") as string | null)?.trim().toLowerCase() ?? "";
   const password = (formData.get("password") as string | null) ?? "";
   const acknowledgement = formData.get("acknowledgement");
+  const rawTier = (formData.get("tier") as string | null) ?? "free";
+  const selectedTier = ALLOWED_TIERS.has(rawTier) ? rawTier : "free";
 
   const errors: NonNullable<AuthFormState>["errors"] = {};
 
@@ -67,7 +70,7 @@ export async function signup(state: AuthFormState, formData: FormData): Promise<
 
   let user;
   try {
-    user = await usersDb.create(name, email, passwordHash);
+    user = await usersDb.create(name, email, passwordHash, selectedTier);
   } catch {
     return { message: "Something went wrong creating your account. Please try again." };
   }
