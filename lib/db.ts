@@ -56,6 +56,55 @@ export const usersDb = {
     return row ? toUser(row) : undefined;
   },
 
+  async findDeletedByEmail(email: string): Promise<User | undefined> {
+    const { prisma } = await import("./prisma");
+    const row = await prisma.user.findFirst({ where: { email, deletedAt: { not: null } } });
+    return row ? toUser(row) : undefined;
+  },
+
+  // Re-register a previously soft-deleted account: reuse the existing row
+  // (satisfies the unique-email constraint) and reset it to a fresh state.
+  // The user's Conversation is intentionally left intact so they resume
+  // where they left off.
+  async revive(
+    userId: number,
+    name: string,
+    passwordHash: string,
+    selectedTier: string = "free",
+  ): Promise<User> {
+    const { prisma } = await import("./prisma");
+    const row = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name,
+        passwordHash,
+        selectedTier,
+        deletedAt: null,
+        createdAt: new Date(),
+        emailVerified: null,
+        emailVerificationToken: null,
+        emailVerificationExpiry: null,
+        passwordResetToken: null,
+        passwordResetExpiry: null,
+        failedLoginAttempts: 0,
+        lockedUntil: null,
+        monthlyChatsUsed: 0,
+        monthlyChatsResetAt: null,
+        subscriptionStatus: "free",
+        planTier: "free",
+        currentPeriodStart: null,
+        currentPeriodEnd: null,
+        cancelAtPeriodEnd: false,
+        stripeCustomerId: null,
+        crisisSignal: false,
+        crisisSignalAt: null,
+        crisisSignalExcerpt: null,
+        crisisSignalKeyword: null,
+      },
+    });
+    return toUser(row);
+  },
+
   async findById(id: number): Promise<User | undefined> {
     const { prisma } = await import("./prisma");
     const row = await prisma.user.findFirst({ where: { id, deletedAt: null } });

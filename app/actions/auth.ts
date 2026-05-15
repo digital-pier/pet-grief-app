@@ -68,9 +68,15 @@ export async function signup(state: AuthFormState, formData: FormData): Promise<
 
   const passwordHash = await bcrypt.hash(password, 10);
 
+  // A previously soft-deleted account can re-register: revive the existing
+  // row (its email still occupies the unique constraint) rather than create.
+  const deleted = await usersDb.findDeletedByEmail(email);
+
   let user;
   try {
-    user = await usersDb.create(name, email, passwordHash, selectedTier);
+    user = deleted
+      ? await usersDb.revive(deleted.id, name, passwordHash, selectedTier)
+      : await usersDb.create(name, email, passwordHash, selectedTier);
   } catch {
     return { message: "Something went wrong creating your account. Please try again." };
   }
