@@ -52,13 +52,13 @@ export const usersDb = {
 
   async findByEmail(email: string): Promise<User | undefined> {
     const { prisma } = await import("./prisma");
-    const row = await prisma.user.findUnique({ where: { email } });
+    const row = await prisma.user.findFirst({ where: { email, deletedAt: null } });
     return row ? toUser(row) : undefined;
   },
 
   async findById(id: number): Promise<User | undefined> {
     const { prisma } = await import("./prisma");
-    const row = await prisma.user.findUnique({ where: { id } });
+    const row = await prisma.user.findFirst({ where: { id, deletedAt: null } });
     return row ? toUser(row) : undefined;
   },
 
