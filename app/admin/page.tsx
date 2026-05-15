@@ -18,6 +18,7 @@ export default async function Admin() {
   if (!verified || verified.userId !== session.userId) redirect("/admin/auth");
 
   const users = await prisma.user.findMany({
+    where: { deletedAt: null },
     select: {
       id: true,
       name: true,

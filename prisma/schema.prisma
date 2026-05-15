@@ -37,6 +37,9 @@ model User {
   // Admin
   isAdmin            Boolean        @default(false) @map("is_admin")
 
+  // Soft delete
+  deletedAt          DateTime?      @map("deleted_at")
+
   // Password reset
   passwordResetToken     String?    @unique @map("password_reset_token")
   passwordResetExpiry    DateTime?  @map("password_reset_expiry")

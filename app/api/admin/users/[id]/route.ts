@@ -19,10 +19,12 @@ export async function DELETE(
   const target = await prisma.user.findUnique({ where: { id: targetId } });
   if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 });
   if (target.isAdmin) return NextResponse.json({ error: "Cannot delete admin accounts" }, { status: 400 });
+  if (target.deletedAt) return NextResponse.json({ error: "User already deleted" }, { status: 400 });
 
-  await prisma.subscription.deleteMany({ where: { userId: targetId } });
-  await prisma.conversation.deleteMany({ where: { userId: targetId } });
-  await prisma.user.delete({ where: { id: targetId } });
+  await prisma.user.update({
+    where: { id: targetId },
+    data: { deletedAt: new Date() },
+  });
 
   return NextResponse.json({ ok: true });
 }
