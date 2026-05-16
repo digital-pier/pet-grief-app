@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { getSession } from "@/lib/session";
 import SubscribeButton from "@/app/components/SubscribeButton";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Pricing — Shared Leash",
   description:
