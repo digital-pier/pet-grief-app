@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { getSession } from "@/lib/session";
+import SubscribeButton from "@/app/components/SubscribeButton";
 
 export const metadata: Metadata = {
   title: "Pricing — Shared Leash",
@@ -50,8 +52,7 @@ function PricingCard({
   includesLabel,
   features,
   bestFor,
-  ctaHref,
-  ctaLabel,
+  cta,
   highlight = false,
   badge,
 }: {
@@ -62,8 +63,7 @@ function PricingCard({
   includesLabel: string;
   features: string[];
   bestFor: string;
-  ctaHref: string;
-  ctaLabel: string;
+  cta: ReactNode;
   highlight?: boolean;
   badge?: string;
 }) {
@@ -153,18 +153,17 @@ function PricingCard({
         {bestFor}
       </p>
 
-      <Link
-        href={ctaHref}
-        className={`mt-auto text-center text-base font-medium px-6 py-3.5 rounded-2xl transition-colors shadow-sm ${
-          highlight
-            ? "bg-amber-500 hover:bg-amber-400 text-amber-950"
-            : "bg-amber-600 hover:bg-amber-700 text-white"
-        }`}
-      >
-        {ctaLabel}
-      </Link>
+      {cta}
     </div>
   );
+}
+
+function ctaClasses(highlight: boolean): string {
+  return `mt-auto text-center text-base font-medium px-6 py-3.5 rounded-2xl transition-colors shadow-sm block ${
+    highlight
+      ? "bg-amber-500 hover:bg-amber-400 text-amber-950"
+      : "bg-amber-600 hover:bg-amber-700 text-white"
+  }`;
 }
 
 function FaqItem({
@@ -194,7 +193,16 @@ function FaqItem({
   );
 }
 
-export default function PricingPage() {
+export default async function PricingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ checkout?: string }>;
+}) {
+  const session = await getSession();
+  const isAuthed = !!session;
+  const { checkout } = await searchParams;
+  const wasCanceled = checkout === "canceled";
+
   return (
     <div className="min-h-screen bg-[#fdf6ee]">
       <nav className="fixed top-0 inset-x-0 z-50 bg-white/80 backdrop-blur-sm border-b border-amber-100">
@@ -248,7 +256,16 @@ export default function PricingPage() {
       </section>
 
       <section className="px-6 pb-24 bg-gradient-to-b from-[#fce8d5] to-[#fdf6ee]">
-        <div className="max-w-6xl mx-auto grid gap-8 md:gap-6 lg:gap-8 md:grid-cols-3 items-stretch">
+        <div className="max-w-6xl mx-auto">
+          {wasCanceled && (
+            <div
+              role="status"
+              className="mb-8 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl px-5 py-4 text-sm text-center"
+            >
+              No charge was made — subscribe whenever you&apos;re ready.
+            </div>
+          )}
+          <div className="grid gap-8 md:gap-6 lg:gap-8 md:grid-cols-3 items-stretch">
           <PricingCard
             name="Essential Access"
             price="Free"
@@ -263,8 +280,11 @@ export default function PricingPage() {
               "Emotional support when you need it most",
             ]}
             bestFor="Anyone beginning their grief journey who needs immediate support and companionship."
-            ctaHref="/register?tier=free"
-            ctaLabel="Start free"
+            cta={
+              <Link href="/register?tier=free" className={ctaClasses(false)}>
+                Start free
+              </Link>
+            }
           />
           <PricingCard
             name="Companion"
@@ -283,8 +303,11 @@ export default function PricingPage() {
               "Anniversary and remembrance support",
             ]}
             bestFor="Pet owners looking for ongoing emotional support and a deeper healing connection."
-            ctaHref="/register?tier=companion"
-            ctaLabel="Choose Companion"
+            cta={
+              <SubscribeButton tier="companion" isAuthed={isAuthed} className={ctaClasses(true)}>
+                Choose Companion
+              </SubscribeButton>
+            }
             highlight
             badge="★ Most Popular"
           />
@@ -306,9 +329,13 @@ export default function PricingPage() {
               "Early access to new features",
             ]}
             bestFor="Users wanting long-term healing tools, deeper reflection, and lasting remembrance experiences."
-            ctaHref="/register?tier=support_plus"
-            ctaLabel="Choose Support+"
+            cta={
+              <SubscribeButton tier="support_plus" isAuthed={isAuthed} className={ctaClasses(false)}>
+                Choose Support+
+              </SubscribeButton>
+            }
           />
+          </div>
         </div>
       </section>
 

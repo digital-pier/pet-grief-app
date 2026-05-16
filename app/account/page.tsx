@@ -4,7 +4,11 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/session";
 import AccountPage from "@/app/components/AccountPage";
 
-export default async function Account() {
+export default async function Account({
+  searchParams,
+}: {
+  searchParams: Promise<{ checkout?: string }>;
+}) {
   const session = await getSession();
   if (!session) redirect("/login");
 
@@ -13,10 +17,14 @@ export default async function Account() {
   const user = await prisma.user.findUnique({ where: { id: session.userId } });
   if (!user) redirect("/login");
 
+  const { checkout } = await searchParams;
+
   return (
     <AccountPage
       userName={user.name}
       email={user.email}
+      initialPlanTier={user.planTier}
+      checkoutStatus={checkout === "success" ? ("success" as const) : null}
     />
   );
 }
