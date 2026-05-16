@@ -29,5 +29,20 @@ export async function GET(request: NextRequest) {
   await usersDb.markEmailVerified(user.id);
   await createSession(user.id, user.email, new Date());
 
+  const planRow = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { selectedTier: true, planTier: true },
+  });
+  const paidTiers = new Set(["companion", "support_plus"]);
+  if (
+    planRow &&
+    paidTiers.has(planRow.selectedTier) &&
+    planRow.planTier === "free"
+  ) {
+    return NextResponse.redirect(
+      new URL(`/checkout/start?tier=${planRow.selectedTier}`, request.url),
+    );
+  }
+
   return NextResponse.redirect(new URL("/", request.url));
 }
